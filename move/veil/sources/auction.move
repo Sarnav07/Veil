@@ -208,3 +208,21 @@ public fun bid_count<T: key + store>(auction: &Auction<T>): u64 {
 }
 
 public fun close_ms<T: key + store>(auction: &Auction<T>): u64 { auction.close_ms }
+
+public fun bidder<T: key + store>(auction: &Auction<T>, index: u64): address {
+    vector::borrow(&auction.bids, index).bidder
+}
+
+public fun bid_amount<T: key + store>(auction: &Auction<T>, index: u64): u64 {
+    vector::borrow(&auction.bids, index).amount
+}
+
+/// The Walrus blobId stored with bid `index` (empty until M2 wiring is used).
+public fun bid_blob_id<T: key + store>(auction: &Auction<T>, index: u64): vector<u8> {
+    vector::borrow(&auction.bids, index).blob_id
+}
+
+/// The commitment stored with bid `index`.
+public fun bid_commitment<T: key + store>(auction: &Auction<T>, index: u64): vector<u8> {
+    vector::borrow(&auction.bids, index).commitment
+}

@@ -59,6 +59,13 @@ fun first_price_two_bidders() {
     ts::next_tx(&mut sc, seller);
     {
         let mut a = ts::take_shared<Auction<Lot>>(&sc);
+        // read path: bids (and their Walrus blobIds) are queryable on-chain
+        assert!(auction::bid_count(&a) == 2, 10);
+        assert!(auction::bidder(&a, 1) == bob, 11);
+        assert!(auction::bid_amount(&a, 1) == 250, 12);
+        assert!(auction::bid_blob_id(&a, 1) == b"blobB", 13);
+        assert!(auction::bid_commitment(&a, 1) == b"cmtB", 14);
+
         let ctx = ts::ctx(&mut sc);
         let mut clk = clock::create_for_testing(ctx);
         clock::set_for_testing(&mut clk, 1000);
