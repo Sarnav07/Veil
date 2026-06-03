@@ -5,9 +5,8 @@
 /// winner is chosen by `settlement::clear`, the seller is paid the clearing
 /// price, losing bids are refunded, and the item goes to the winner.
 ///
-/// In M1 a bid's amount equals its escrowed coin value (public). `blob_id` and
-/// `commitment` are carried now but unused; M2 stores the bid's Walrus blob and
-/// M3 hides the amount behind a Seal time-lock, revealing it only at settlement.
+/// Each bid escrows its SUI payment; `blob_id` references the bid's (Seal-
+/// encrypted) Walrus blob and `commitment` binds it for the sealed-bid reveal.
 module veil::auction;
 
 use sui::balance::{Self, Balance};
@@ -217,7 +216,7 @@ public fun bid_amount<T: key + store>(auction: &Auction<T>, index: u64): u64 {
     vector::borrow(&auction.bids, index).amount
 }
 
-/// The Walrus blobId stored with bid `index` (empty until M2 wiring is used).
+/// The Walrus blobId recorded with bid `index`.
 public fun bid_blob_id<T: key + store>(auction: &Auction<T>, index: u64): vector<u8> {
     vector::borrow(&auction.bids, index).blob_id
 }

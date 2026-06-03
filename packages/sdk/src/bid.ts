@@ -1,10 +1,8 @@
 /**
- * Bid payload encoding + commitment.
- *
- * The payload is the cleartext a bidder commits to. In M2 it is stored on Walrus
- * as-is; in M3 it is Seal-encrypted before storage. The on-chain `commitment`
- * binds the sealed bid to its later reveal: at settlement the keeper checks that
- * `sha256(decoded payload) == commitment`.
+ * Bid payload encoding and commitment. The payload is the cleartext a bidder
+ * commits to; it is Seal-encrypted before being stored on Walrus. The on-chain
+ * commitment binds the sealed bid to its reveal: at settlement the keeper checks
+ * sha256(payload) == commitment.
  */
 export interface BidPayload {
   /** Bid amount in MIST (1 SUI = 1_000_000_000 MIST). */
