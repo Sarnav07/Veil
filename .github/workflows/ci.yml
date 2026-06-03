@@ -30,7 +30,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Pin the Sui release used in CI. Bump deliberately.
-      SUI_VERSION: testnet-v1.39.3
+      SUI_VERSION: testnet-v1.73.0
     steps:
       - uses: actions/checkout@v4
       - name: Install Sui CLI

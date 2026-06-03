@@ -4,8 +4,8 @@ edition = "2024.beta"
 license = "MIT"
 version = "0.0.0"
 
-[dependencies]
-Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "framework/testnet" }
+# Sui + MoveStdlib are auto-added by the toolchain (matched to the sui binary),
+# so we do not pin them explicitly here.
 
 [addresses]
 veil = "0x0"
