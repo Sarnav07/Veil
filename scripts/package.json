@@ -7,11 +7,13 @@
     "typecheck": "tsc --noEmit",
     "spike:tatum": "tsx src/tatum-rpc.spike.ts",
     "spike:walrus": "tsx src/walrus.spike.ts",
-    "spike:seal": "tsx src/seal.spike.ts"
+    "spike:seal": "tsx src/seal.spike.ts",
+    "spike:m2": "tsx src/m2-walrus.integration.ts"
   },
   "dependencies": {
     "@mysten/seal": "^0.4.24",
     "@mysten/sui": "1.37.4",
+    "@veil/sdk": "workspace:*",
     "dotenv": "^16.4.5"
   },
   "devDependencies": {
