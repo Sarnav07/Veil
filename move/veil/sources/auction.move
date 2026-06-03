@@ -1,12 +1,7 @@
-/// Core sealed-bid auction primitive.
-///
-/// An auction sells one item (`T`) and accepts SUI bids, each escrowed on
-/// submission. After `close_ms` the auction is closed and then settled: the
-/// winner is chosen by `settlement::clear`, the seller is paid the clearing
-/// price, losing bids are refunded, and the item goes to the winner.
-///
-/// Each bid escrows its SUI payment; `blob_id` references the bid's (Seal-
-/// encrypted) Walrus blob and `commitment` binds it for the sealed-bid reveal.
+/// Sealed-bid auction. A bid escrows a fixed deposit and an on-chain commitment;
+/// the amount itself lives only in the bid's Seal-encrypted Walrus blob. After the
+/// close time the keeper reveals every bid and `settle` verifies each against its
+/// commitment before clearing, so nothing on-chain leaks a bid until it's over.
 module veil::auction;
 
 use sui::balance::{Self, Balance};
@@ -16,23 +11,24 @@ use sui::event;
 use sui::sui::SUI;
 use veil::settlement;
 
-// --- lifecycle states ---
 const STATE_BIDDING: u8 = 0;
 const STATE_REVEALING: u8 = 1;
 const STATE_SETTLED: u8 = 2;
 
-// --- errors ---
 const EWrongState: u64 = 1;
 const EBiddingClosed: u64 = 2;
 const EBiddingStillOpen: u64 = 3;
-const EZeroBid: u64 = 4;
-const EBadCloseTime: u64 = 5;
+const EBadCloseTime: u64 = 4;
+const EWrongDeposit: u64 = 5;
+const ERevealMismatch: u64 = 6;
+const EBidAboveDeposit: u64 = 7;
+const EBadCommitment: u64 = 8;
 
 public struct Bid has store {
     bidder: address,
-    amount: u64,
-    escrow: Balance<SUI>,
+    deposit: Balance<SUI>,
     blob_id: vector<u8>,
+    // sha2_256(bcs(amount) || nonce); the reveal at settlement must match this.
     commitment: vector<u8>,
 }
 
@@ -43,21 +39,21 @@ public struct Auction<T: key + store> has key {
     pricing: u8,
     state: u8,
     close_ms: u64,
+    deposit: u64,
     bids: vector<Bid>,
 }
 
-// --- events ---
 public struct AuctionCreated has copy, drop {
     auction: ID,
     seller: address,
     close_ms: u64,
     pricing: u8,
+    deposit: u64,
 }
 
 public struct BidSubmitted has copy, drop {
     auction: ID,
     bidder: address,
-    amount: u64,
 }
 
 public struct AuctionSettled has copy, drop {
@@ -67,12 +63,11 @@ public struct AuctionSettled has copy, drop {
     bid_count: u64,
 }
 
-/// Construct an auction (used directly by tests/composition). Aborts if the
-/// close time is not in the future.
 public fun new<T: key + store>(
     item: T,
     pricing: u8,
     close_ms: u64,
+    deposit: u64,
     clock: &Clock,
     ctx: &mut TxContext,
 ): Auction<T> {
@@ -84,6 +79,7 @@ public fun new<T: key + store>(
         pricing,
         state: STATE_BIDDING,
         close_ms,
+        deposit,
         bids: vector[],
     };
     event::emit(AuctionCreated {
@@ -91,25 +87,27 @@ public fun new<T: key + store>(
         seller: auction.seller,
         close_ms,
         pricing,
+        deposit,
     });
     auction
 }
 
-/// Create and share an auction in one call.
 public fun create<T: key + store>(
     item: T,
     pricing: u8,
     close_ms: u64,
+    deposit: u64,
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
-    transfer::share_object(new(item, pricing, close_ms, clock, ctx));
+    transfer::share_object(new(item, pricing, close_ms, deposit, clock, ctx));
 }
 
-/// Submit a bid. The full `payment` is escrowed; its value is the bid amount.
+/// Place a sealed bid: escrow exactly the auction's deposit and record the
+/// commitment + Walrus blobId. The bid amount stays hidden in the blob.
 public fun submit_bid<T: key + store>(
     auction: &mut Auction<T>,
-    payment: Coin<SUI>,
+    deposit: Coin<SUI>,
     blob_id: vector<u8>,
     commitment: vector<u8>,
     clock: &Clock,
@@ -117,34 +115,38 @@ public fun submit_bid<T: key + store>(
 ) {
     assert!(auction.state == STATE_BIDDING, EWrongState);
     assert!(clock.timestamp_ms() < auction.close_ms, EBiddingClosed);
-    let amount = coin::value(&payment);
-    assert!(amount > 0, EZeroBid);
+    assert!(coin::value(&deposit) == auction.deposit, EWrongDeposit);
 
     let bidder = ctx.sender();
     vector::push_back(&mut auction.bids, Bid {
         bidder,
-        amount,
-        escrow: coin::into_balance(payment),
+        deposit: coin::into_balance(deposit),
         blob_id,
         commitment,
     });
-    event::emit(BidSubmitted { auction: object::id(auction), bidder, amount });
+    event::emit(BidSubmitted { auction: object::id(auction), bidder });
 }
 
-/// Close bidding once the close time has passed.
 public fun close<T: key + store>(auction: &mut Auction<T>, clock: &Clock) {
     assert!(auction.state == STATE_BIDDING, EWrongState);
     assert!(clock.timestamp_ms() >= auction.close_ms, EBiddingStillOpen);
     auction.state = STATE_REVEALING;
 }
 
-/// Settle a closed auction: pay the seller the clearing price, refund losers,
-/// and transfer the item to the winner. With no bids, the item returns to the
-/// seller.
-public fun settle<T: key + store>(auction: &mut Auction<T>, ctx: &mut TxContext) {
+/// Settle a closed auction from the keeper's revealed bids. `amounts[i]`/`nonces[i]`
+/// must open the commitment of bid `i`; the winner pays the clearing price from
+/// its deposit, everyone else is fully refunded, and the item goes to the winner.
+public fun settle<T: key + store>(
+    auction: &mut Auction<T>,
+    amounts: vector<u64>,
+    nonces: vector<vector<u8>>,
+    ctx: &mut TxContext,
+) {
     assert!(auction.state == STATE_REVEALING, EWrongState);
-    let auction_id = object::id(auction);
     let n = vector::length(&auction.bids);
+    assert!(vector::length(&amounts) == n && vector::length(&nonces) == n, ERevealMismatch);
+
+    let auction_id = object::id(auction);
 
     if (n == 0) {
         let item = option::extract(&mut auction.item);
@@ -159,28 +161,31 @@ public fun settle<T: key + store>(auction: &mut Auction<T>, ctx: &mut TxContext)
         return
     };
 
-    let mut amounts = vector<u64>[];
+    // Open every commitment before touching funds.
     let mut i = 0;
     while (i < n) {
-        vector::push_back(&mut amounts, vector::borrow(&auction.bids, i).amount);
+        let amount = *vector::borrow(&amounts, i);
+        assert!(amount <= auction.deposit, EBidAboveDeposit);
+        let mut preimage = std::bcs::to_bytes(&amount);
+        vector::append(&mut preimage, *vector::borrow(&nonces, i));
+        assert!(std::hash::sha2_256(preimage) == vector::borrow(&auction.bids, i).commitment, EBadCommitment);
         i = i + 1;
     };
+
     let (winner_index, price) = settlement::clear(&amounts, auction.pricing);
     let winner = vector::borrow(&auction.bids, winner_index).bidder;
 
-    // Distribute escrows. Pop from the back so the live index equals `k`.
     let mut k = n;
     while (k > 0) {
         k = k - 1;
-        let Bid { bidder, amount: _, escrow, blob_id: _, commitment: _ } =
-            vector::pop_back(&mut auction.bids);
+        let Bid { bidder, deposit, blob_id: _, commitment: _ } = vector::pop_back(&mut auction.bids);
         if (k == winner_index) {
-            let mut funds = escrow;
+            let mut funds = deposit;
             let payment = balance::split(&mut funds, price);
-            send_or_destroy(payment, auction.seller, ctx); // clearing price to seller
-            send_or_destroy(funds, bidder, ctx); // overpayment back to winner
+            send_or_destroy(payment, auction.seller, ctx);
+            send_or_destroy(funds, bidder, ctx);
         } else {
-            send_or_destroy(escrow, bidder, ctx); // full refund to loser
+            send_or_destroy(deposit, bidder, ctx);
         };
     };
 
@@ -190,7 +195,6 @@ public fun settle<T: key + store>(auction: &mut Auction<T>, ctx: &mut TxContext)
     event::emit(AuctionSettled { auction: auction_id, winner, price, bid_count: n });
 }
 
-/// Transfer a balance as a coin, or destroy it if zero (avoids zero-value coin litter).
 fun send_or_destroy(funds: Balance<SUI>, to: address, ctx: &mut TxContext) {
     if (balance::value(&funds) > 0) {
         transfer::public_transfer(coin::from_balance(funds, ctx), to);
@@ -199,7 +203,6 @@ fun send_or_destroy(funds: Balance<SUI>, to: address, ctx: &mut TxContext) {
     };
 }
 
-// --- read-only accessors (handy for the frontend / tests) ---
 public fun state<T: key + store>(auction: &Auction<T>): u8 { auction.state }
 
 public fun bid_count<T: key + store>(auction: &Auction<T>): u64 {
@@ -208,20 +211,16 @@ public fun bid_count<T: key + store>(auction: &Auction<T>): u64 {
 
 public fun close_ms<T: key + store>(auction: &Auction<T>): u64 { auction.close_ms }
 
+public fun deposit<T: key + store>(auction: &Auction<T>): u64 { auction.deposit }
+
 public fun bidder<T: key + store>(auction: &Auction<T>, index: u64): address {
     vector::borrow(&auction.bids, index).bidder
 }
 
-public fun bid_amount<T: key + store>(auction: &Auction<T>, index: u64): u64 {
-    vector::borrow(&auction.bids, index).amount
-}
-
-/// The Walrus blobId recorded with bid `index`.
 public fun bid_blob_id<T: key + store>(auction: &Auction<T>, index: u64): vector<u8> {
     vector::borrow(&auction.bids, index).blob_id
 }
 
-/// The commitment stored with bid `index`.
 public fun bid_commitment<T: key + store>(auction: &Auction<T>, index: u64): vector<u8> {
     vector::borrow(&auction.bids, index).commitment
 }
