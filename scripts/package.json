@@ -9,7 +9,9 @@
     "spike:walrus": "tsx src/walrus.spike.ts",
     "spike:seal": "tsx src/seal.spike.ts",
     "spike:m2": "tsx src/m2-walrus.integration.ts",
-    "spike:m3": "tsx src/m3-seal.integration.ts"
+    "spike:m3": "tsx src/m3-seal.integration.ts",
+    "spike:m4": "tsx src/m4-launch.integration.ts",
+    "spike:m5": "tsx src/m5-otc.integration.ts"
   },
   "dependencies": {
     "@mysten/seal": "^0.4.24",
