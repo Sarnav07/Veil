@@ -1,0 +1,11 @@
+[package]
+name = "veil"
+edition = "2024.beta"
+license = "MIT"
+version = "0.0.0"
+
+[dependencies]
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "framework/testnet" }
+
+[addresses]
+veil = "0x0"
