@@ -25,6 +25,14 @@ fun deposit_coin(sc: &mut ts::Scenario): Coin<SUI> {
     coin::mint_for_testing<SUI>(DEPOSIT, ts::ctx(sc))
 }
 
+#[test]
+fun commitment_matches_sdk() {
+    // sha2_256(bcs(100u64) || bcs(2u64) || b"veil") as computed by @veil/sdk's
+    // encodeLaunchBid — both sides must agree or a bid would never open at settle.
+    let expected = x"9b94366f48ee132d5d06f3200c290fafc82858c081ad9fa57af3a4d379f21bd1";
+    assert!(commit_of(100, 2, b"veil") == expected, 0);
+}
+
 fun open_sale(sc: &mut ts::Scenario, supply: u64) {
     let ctx = ts::ctx(sc);
     let clk = clock::create_for_testing(ctx);
