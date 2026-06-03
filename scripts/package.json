@@ -8,7 +8,8 @@
     "spike:tatum": "tsx src/tatum-rpc.spike.ts",
     "spike:walrus": "tsx src/walrus.spike.ts",
     "spike:seal": "tsx src/seal.spike.ts",
-    "spike:m2": "tsx src/m2-walrus.integration.ts"
+    "spike:m2": "tsx src/m2-walrus.integration.ts",
+    "spike:m3": "tsx src/m3-seal.integration.ts"
   },
   "dependencies": {
     "@mysten/seal": "^0.4.24",
