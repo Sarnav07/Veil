@@ -1,37 +1,40 @@
+import { bcs } from '@mysten/sui/bcs';
+
 /**
- * Bid payload encoding and commitment. The payload is the cleartext a bidder
- * commits to; it is Seal-encrypted before being stored on Walrus. The on-chain
- * commitment binds the sealed bid to its reveal: at settlement the keeper checks
- * sha256(payload) == commitment.
+ * A bid payload is `bcs(amount) || nonce`. It is Seal-encrypted and stored on
+ * Walrus; its SHA-256 is the on-chain commitment. At settlement the keeper opens
+ * each commitment with the decoded (amount, nonce), which `veil::auction::settle`
+ * re-hashes to verify — so it can't lie about a bid.
  */
 export interface BidPayload {
   /** Bid amount in MIST (1 SUI = 1_000_000_000 MIST). */
   amount: bigint;
-  /** Random hex nonce so two equal bids still produce distinct blobs/commitments. */
-  nonce: string;
+  /** Random nonce so equal bids still produce distinct blobs/commitments. */
+  nonce: Uint8Array;
 }
 
-export function encodeBid(payload: BidPayload): Uint8Array {
-  const json = JSON.stringify({ amount: payload.amount.toString(), nonce: payload.nonce });
-  return new TextEncoder().encode(json);
+export function encodeBid({ amount, nonce }: BidPayload): Uint8Array {
+  const amountBytes = bcs.u64().serialize(amount).toBytes();
+  const out = new Uint8Array(amountBytes.length + nonce.length);
+  out.set(amountBytes);
+  out.set(nonce, amountBytes.length);
+  return out;
 }
 
 export function decodeBid(bytes: Uint8Array): BidPayload {
-  const obj = JSON.parse(new TextDecoder().decode(bytes)) as { amount: string; nonce: string };
-  return { amount: BigInt(obj.amount), nonce: obj.nonce };
+  const amount = BigInt(bcs.u64().parse(bytes.subarray(0, 8)));
+  return { amount, nonce: bytes.subarray(8) };
 }
 
-/** SHA-256 commitment over the encoded bid bytes. */
-export async function commit(bytes: Uint8Array): Promise<Uint8Array> {
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
-  return new Uint8Array(digest);
+/** SHA-256 commitment over an encoded bid (matches Move `sha2_256`). */
+export async function commit(payload: Uint8Array): Promise<Uint8Array> {
+  return new Uint8Array(await crypto.subtle.digest('SHA-256', payload));
 }
 
-/** A random hex nonce (default 16 bytes). */
-export function randomNonce(byteLength = 16): string {
-  const bytes = new Uint8Array(byteLength);
-  crypto.getRandomValues(bytes);
-  return toHex(bytes);
+export function randomNonce(byteLength = 16): Uint8Array {
+  const nonce = new Uint8Array(byteLength);
+  crypto.getRandomValues(nonce);
+  return nonce;
 }
 
 export function toHex(bytes: Uint8Array): string {
