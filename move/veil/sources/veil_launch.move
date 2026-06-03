@@ -35,7 +35,7 @@ public struct Bid has store {
     commitment: vector<u8>,
 }
 
-public struct Sale<T: store> has key {
+public struct Sale<phantom T: store> has key {
     id: UID,
     seller: address,
     supply: Balance<T>,
