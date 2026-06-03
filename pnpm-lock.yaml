@@ -46,6 +46,13 @@ importers:
         version: 5.9.3
 
   packages/sdk:
+    dependencies:
+      '@mysten/seal':
+        specifier: ^0.4.24
+        version: 0.4.24(typescript@5.9.3)
+      '@mysten/sui':
+        specifier: 1.37.4
+        version: 1.37.4(typescript@5.9.3)
     devDependencies:
       '@types/node':
         specifier: ^20.16.0
