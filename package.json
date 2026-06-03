@@ -15,5 +15,10 @@
     "spike:walrus": "pnpm --filter @veil/scripts spike:walrus",
     "spike:seal": "pnpm --filter @veil/scripts spike:seal",
     "move:test": "sui move test --path move/veil"
+  },
+  "pnpm": {
+    "overrides": {
+      "@mysten/sui": "1.37.4"
+    }
   }
 }
