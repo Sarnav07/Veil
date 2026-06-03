@@ -1,0 +1,25 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# env / secrets — never commit
+.env
+.env.local
+.env.*.local
+*.key
+
+# build output
+dist/
+build/
+*.tsbuildinfo
+
+# next.js
+apps/web/.next/
+apps/web/out/
+
+# sui move build artifacts
+move/**/build/
+
+# logs / os
+*.log
+.DS_Store

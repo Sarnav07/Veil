@@ -1,0 +1,19 @@
+{
+  "name": "veil",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Confidential sealed-bid trading primitive on Sui (Walrus + Seal + Tatum).",
+  "license": "MIT",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "pnpm -r --if-present lint",
+    "spike:tatum": "pnpm --filter @veil/scripts spike:tatum",
+    "spike:walrus": "pnpm --filter @veil/scripts spike:walrus",
+    "spike:seal": "pnpm --filter @veil/scripts spike:seal",
+    "move:test": "sui move test --path move/veil"
+  }
+}

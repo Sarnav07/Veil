@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    name: typecheck (node)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+
+  move:
+    name: move test
+    runs-on: ubuntu-latest
+    env:
+      # Pin the Sui release used in CI. Bump deliberately.
+      SUI_VERSION: testnet-v1.39.3
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Sui CLI
+        run: |
+          set -euo pipefail
+          url="https://github.com/MystenLabs/sui/releases/download/${SUI_VERSION}/sui-${SUI_VERSION}-ubuntu-x86_64.tgz"
+          curl -fsSL "$url" -o sui.tgz
+          tar -xzf sui.tgz
+          sudo mv ./sui /usr/local/bin/sui
+          sui --version
+      - name: Move test
+        run: sui move test --path move/veil
