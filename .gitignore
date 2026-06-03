@@ -19,6 +19,10 @@ apps/web/out/
 
 # sui move build artifacts
 move/**/build/
+move/**/Move.lock
+
+# local planning notes
+tasks/
 
 # logs / os
 *.log
