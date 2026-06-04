@@ -16,9 +16,22 @@ interface StoreResponse {
 export class WalrusClient {
   constructor(private readonly config: WalrusConfig) {}
 
+  private async fetchWithRetry(url: string, options?: RequestInit, retries = 3): Promise<Response> {
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        const res = await fetch(url, options);
+        if (res.ok) return res;
+      } catch (e) {
+        if (attempt === retries - 1) throw e;
+      }
+      await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
+    }
+    return fetch(url, options);
+  }
+
   /** Store a blob and return its Walrus blobId. `epochs` is the storage lifetime. */
   async store(data: Uint8Array, epochs = 1): Promise<string> {
-    const res = await fetch(`${this.config.publisherUrl}/v1/blobs?epochs=${epochs}`, {
+    const res = await this.fetchWithRetry(`${this.config.publisherUrl}/v1/blobs?epochs=${epochs}`, {
       method: 'PUT',
       body: data,
     });
@@ -35,7 +48,7 @@ export class WalrusClient {
 
   /** Read a blob's bytes by its blobId. */
   async read(blobId: string): Promise<Uint8Array> {
-    const res = await fetch(`${this.config.aggregatorUrl}/v1/blobs/${blobId}`);
+    const res = await this.fetchWithRetry(`${this.config.aggregatorUrl}/v1/blobs/${blobId}`);
     if (!res.ok) {
       throw new Error(`Walrus aggregator error: ${res.status} ${res.statusText}`);
     }

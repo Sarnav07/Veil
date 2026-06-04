@@ -23,15 +23,22 @@ Thresholdizable Batched IBE* ([CRYPTO 2025](https://eprint.iacr.org/2024/1575)) 
 
 ## Repository layout
 
-```
+```text
 move/veil/        Sui Move package (auction primitive, Seal policy, settlement)
-scripts/          M0 dependency spikes (Tatum RPC, Walrus, Seal)
-apps/web/         Next.js frontend (@mysten/dapp-kit)
+packages/sdk/     TypeScript SDK for Seal + Walrus + Tatum integrations and TX building
+scripts/          Keeper orchestrator + spikes
+apps/web/         Next.js frontend (@mysten/dapp-kit) [WIP]
 docs/             DEMO.md (visual scope + storyboard)
-IMPLEMENTATION_PLAN.md   milestones, git workflow, roadmap
 ```
 
-## Quickstart (M0)
+## Current Status
+
+- **On-chain Contracts**: 100% complete, fully unit-tested (31/31), and deployed to Sui Testnet.
+- **Off-chain SDK**: 100% complete. Handles creating transactions, encrypting bids via Seal, and fetching fiat data from Tatum.
+- **Keeper Orchestrator**: 100% complete. A fully automated backend loop that pulls encrypted blobs from Walrus, evaluates the Seal release policy on-chain, and settles the trade.
+- **Frontend App**: **Work in Progress.**
+
+## Quickstart
 
 Prerequisites: Node ≥ 20, pnpm 9, the [Sui CLI](https://docs.sui.io/guides/developer/getting-started/sui-install),
 and a free [Tatum API key](https://dashboard.tatum.io).
@@ -40,16 +47,13 @@ and a free [Tatum API key](https://dashboard.tatum.io).
 pnpm install
 cp .env.example .env          # then fill in TATUM_API_KEY and SUI_PRIVATE_KEY
 
-pnpm spike:tatum              # verify Sui RPC reachability via the Tatum gateway
-pnpm spike:walrus            # store + read a blob on Walrus testnet
-pnpm spike:seal              # connect to Seal key servers + encrypt a secret
-
-sui move test --path move/veil   # Move package builds + tests pass
-pnpm --filter @veil/web dev      # frontend with Sui wallet connect
+pnpm typecheck                # verifies everything is typed correctly
+pnpm lint                     # lints all packages
+sui move test --path move/veil # Move package builds + tests pass
+pnpm --filter @veil/web dev   # run the frontend WIP
 ```
 
-See [`IMPLEMENTATION_PLAN.md`](./IMPLEMENTATION_PLAN.md) for the full milestone plan and
-[`docs/DEMO.md`](./docs/DEMO.md) for the demo storyboard.
+See [`docs/DEMO.md`](./docs/DEMO.md) for the demo storyboard.
 
 ## License
 

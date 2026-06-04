@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
+    "lint": "tsc --noEmit",
     "spike:tatum": "tsx src/tatum-rpc.spike.ts",
     "spike:walrus": "tsx src/walrus.spike.ts",
     "spike:seal": "tsx src/seal.spike.ts",
