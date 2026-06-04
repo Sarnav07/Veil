@@ -101,13 +101,6 @@ One sealed-bid engine; two apps on top: **VEIL-Launch** (anti-snipe token sales)
 
 ## 2. What is partially done (started but incomplete)
 
-- **VEIL-OTC vs. the frozen interface contract (`tasks/m4-m5-contract.md`).** The
-  implemented `new`/`create`/`settle` added `reserve_nonce` parameters
-  (`veil_otc.move:75`, `:108`, `:154`) that the frozen signatures omit. This is a
-  deliberate **security improvement** — a bare `sha2_256(bcs(reserve))` over a `u64` is
-  brute-forceable — but it is an undocumented deviation from the "single source of truth"
-  contract and the SDK has **no OTC RFQ helper** for it (the contract asked for "a thin
-  RFQ helper" in `otc.ts`; only `encodeQuote`/`decodeQuote` exist).
 
 - **Frontend (`apps/web`).** Scaffolding only: `providers.tsx` wires
   dapp-kit + react-query + testnet fullnode; `page.tsx` is a `ConnectButton` + tagline +

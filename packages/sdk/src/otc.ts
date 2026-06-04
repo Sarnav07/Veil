@@ -1,5 +1,5 @@
 import { bcs } from '@mysten/sui/bcs';
-import { encodeBid, type BidPayload } from './bid.js';
+import { encodeBid, type BidPayload, randomNonce } from './bid.js';
 
 /**
  * A sealed quote payload for an RFQ is `bcs(price) || nonce` — the same shape as
@@ -30,3 +30,24 @@ export function decodeQuote(bytes: Uint8Array): QuotePayload {
   const price = BigInt(bcs.u64().parse(bytes.subarray(0, 8)));
   return { price, nonce: bytes.subarray(8) };
 }
+
+/**
+ * The maker's reserve floor for an RFQ. Like quotes, the reserve is committed
+ * as `sha2_256(bcs(reserve) || reserve_nonce)`.
+ */
+export interface ReservePayload {
+  reserve: bigint;
+  reserveNonce: Uint8Array;
+}
+
+/** Generate a random nonce and create a ReservePayload. */
+export function generateReserve(reserve: bigint): ReservePayload {
+  return { reserve, reserveNonce: randomNonce() };
+}
+
+/** Encode the reserve to match the Move preimage bytes. */
+export function encodeReserve({ reserve, reserveNonce }: ReservePayload): Uint8Array {
+  const payload: BidPayload = { amount: reserve, nonce: reserveNonce };
+  return encodeBid(payload);
+}
+
