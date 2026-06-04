@@ -53,7 +53,7 @@ export default function CreatePage() {
       await signAndExecute({ transaction: tx });
       router.push('/');
     } catch (err: any) {
-      console.error(err);
+
       if (err.message?.includes('Rejected')) {
         // User cancelled in wallet, just reset state
         return;
