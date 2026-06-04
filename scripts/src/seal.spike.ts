@@ -16,10 +16,9 @@ import { SealClient } from '@mysten/seal';
 import { SuiClient, SuiHTTPTransport } from '@mysten/sui/client';
 import { optionalEnv, requireEnv } from './env.js';
 
-// Replaced in M3 with the published `veil` package id (the one defining
-// `seal_approve`). For an encryption-only connectivity spike, any namespace works.
-const PLACEHOLDER_PACKAGE_ID =
-  '0x1111111111111111111111111111111111111111111111111111111111111111';
+// The published `veil` package id (the one defining `seal_approve`).
+const VEIL_PACKAGE_ID =
+  '0x526e247db2ca1870677b30c8563a691bf7651a97b1d3b79e0caa802a7f60c57b';
 
 function toHexId(label: string): string {
   return `0x${Buffer.from(label, 'utf8').toString('hex')}`;
@@ -52,7 +51,7 @@ async function main(): Promise<void> {
   const secret = new TextEncoder().encode('veil-seal-spike: a bid no one can see yet');
   const { encryptedObject } = await sealClient.encrypt({
     threshold: 1,
-    packageId: PLACEHOLDER_PACKAGE_ID,
+    packageId: VEIL_PACKAGE_ID,
     id: toHexId('veil-m0-spike'),
     data: secret,
   });
