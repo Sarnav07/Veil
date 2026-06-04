@@ -7,7 +7,7 @@ type Variant = 'primary' | 'secondary' | 'ghost';
 
 const styles: Record<Variant, string> = {
   primary:
-    'bg-white text-black hover:bg-white/90 active:scale-[0.97]',
+    'bg-accent text-black shadow-[0_0_12px_var(--color-accent-dim)] hover:bg-[#34d399] hover:shadow-[0_0_16px_rgba(16,185,129,0.25)] hover:-translate-y-0.5',
   secondary:
     'bg-surface text-text-primary border border-border-subtle hover:bg-surface-hover active:scale-[0.97]',
   ghost:

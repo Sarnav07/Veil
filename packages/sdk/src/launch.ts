@@ -1,5 +1,5 @@
 import { bcs } from '@mysten/sui/bcs';
-import { commit, randomNonce, toHex } from './bid.js';
+import { commit, randomNonce, toHex } from './bid';
 
 /**
  * A launch bid payload is `bcs(price) || bcs(qty) || nonce`. It is Seal-encrypted
@@ -37,4 +37,3 @@ export function decodeLaunchBid(bytes: Uint8Array): LaunchBidPayload {
   return { price, qty, nonce: bytes.subarray(16) };
 }
 
-export { commit, randomNonce, toHex };

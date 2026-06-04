@@ -33,7 +33,7 @@ export class WalrusClient {
   async store(data: Uint8Array, epochs = 1): Promise<string> {
     const res = await this.fetchWithRetry(`${this.config.publisherUrl}/v1/blobs?epochs=${epochs}`, {
       method: 'PUT',
-      body: data,
+      body: data as any,
     });
     if (!res.ok) {
       throw new Error(`Walrus publisher error: ${res.status} ${res.statusText}`);

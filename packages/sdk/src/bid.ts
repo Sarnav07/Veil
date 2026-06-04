@@ -28,7 +28,7 @@ export function decodeBid(bytes: Uint8Array): BidPayload {
 
 /** SHA-256 commitment over an encoded bid (matches Move `sha2_256`). */
 export async function commit(payload: Uint8Array): Promise<Uint8Array> {
-  return new Uint8Array(await crypto.subtle.digest('SHA-256', payload));
+  return new Uint8Array(await crypto.subtle.digest('SHA-256', payload as any));
 }
 
 export function randomNonce(byteLength = 16): Uint8Array {

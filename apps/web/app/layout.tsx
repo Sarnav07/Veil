@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { Inter, JetBrains_Mono } from 'next/font/google';
+import { Inter, JetBrains_Mono, Playfair_Display } from 'next/font/google';
 
 import './globals.css';
 import { Providers } from './providers';
@@ -19,6 +19,12 @@ const mono = JetBrains_Mono({
   variable: '--font-mono',
 });
 
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-serif',
+});
+
 export const metadata: Metadata = {
   title: 'VEIL — Confidential Sealed-Bid Trading',
   description:
@@ -27,7 +33,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${mono.variable}`}>
+    <html lang="en" className={`${inter.variable} ${mono.variable} ${playfair.variable}`}>
       <body className="flex min-h-screen flex-col font-sans antialiased">
         <Providers>
           <Navbar />

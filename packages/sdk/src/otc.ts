@@ -1,5 +1,5 @@
 import { bcs } from '@mysten/sui/bcs';
-import { encodeBid, type BidPayload, randomNonce } from './bid.js';
+import { encodeBid, type BidPayload, randomNonce } from './bid';
 
 /**
  * A sealed quote payload for an RFQ is `bcs(price) || nonce` — the same shape as

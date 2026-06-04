@@ -13,8 +13,8 @@ const config: Config = {
         'surface-hover': '#1A1A1A',
         'text-primary': '#F3F4F6',
         'text-secondary': '#9CA3AF',
-        accent: '#38BDF8',
-        'accent-dim': 'rgba(56, 189, 248, 0.15)',
+        accent: '#10b981', // AgentNet green
+        'accent-dim': 'rgba(16, 185, 129, 0.15)',
         'border-subtle': 'rgba(255, 255, 255, 0.08)',
         success: '#10B981',
         error: '#EF4444',
@@ -22,6 +22,7 @@ const config: Config = {
       fontFamily: {
         sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
         mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
+        serif: ['var(--font-serif)', 'ui-serif', 'Georgia', 'serif'],
       },
       transitionTimingFunction: {
         snappy: 'cubic-bezier(0.2, 0.8, 0.2, 1)',

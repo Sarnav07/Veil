@@ -35,11 +35,62 @@
   }
 
   .glow-ring {
-    box-shadow: 0 0 0 1px #38BDF8, 0 0 12px rgba(56, 189, 248, 0.15);
+    box-shadow: 0 0 0 1px #10b981, 0 0 12px rgba(16, 185, 129, 0.15);
   }
 
   .glass {
     @apply bg-surface border border-border-subtle rounded-2xl;
     backdrop-filter: blur(12px);
+  }
+
+  /* 3D Animated Grid Background */
+  .animated-grid-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    overflow: hidden;
+    background-color: #000;
+    perspective: 1000px;
+  }
+
+  .animated-grid-bg::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Fade out the edges of the grid using a radial gradient mask */
+    background: radial-gradient(circle at center, transparent 0%, #000 80%);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .animated-grid {
+    position: absolute;
+    width: 200vw;
+    height: 200vh;
+    top: -50vh;
+    left: -50vw;
+    /* Grid lines */
+    background-image: 
+      linear-gradient(to right, rgba(16, 185, 129, 0.2) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(16, 185, 129, 0.2) 1px, transparent 1px);
+    background-size: 80px 80px;
+    transform: rotateX(60deg) translateZ(-200px);
+    transform-origin: center center;
+    animation: grid-move 20s linear infinite;
+  }
+
+  @keyframes grid-move {
+    0% {
+      transform: rotateX(60deg) translateZ(-200px) translateY(0);
+    }
+    100% {
+      transform: rotateX(60deg) translateZ(-200px) translateY(80px); /* Move one grid cell down */
+    }
   }
 }
