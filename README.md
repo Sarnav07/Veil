@@ -49,7 +49,7 @@ cp .env.example .env          # then fill in TATUM_API_KEY and SUI_PRIVATE_KEY
 
 pnpm typecheck                # verifies everything is typed correctly
 pnpm lint                     # lints all packages
-sui move test --path move/veil # Move package builds + tests pass
+sui move test --path move/veil # 31/31 tests pass with the toolchain-matched framework (no pinned Sui dep)
 pnpm --filter @veil/web dev   # run the frontend WIP
 ```
 

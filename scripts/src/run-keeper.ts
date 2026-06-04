@@ -253,4 +253,7 @@ async function main() {
   }
 }
 
-main().catch(console.error);
+main().catch((err) => {
+  console.error('❌ Keeper failed:', err instanceof Error ? err.message : 'Unknown error');
+  process.exit(1);
+});

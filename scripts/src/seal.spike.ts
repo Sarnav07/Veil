@@ -17,8 +17,10 @@ import { SuiClient, SuiHTTPTransport } from '@mysten/sui/client';
 import { optionalEnv, requireEnv } from './env.js';
 
 // The published `veil` package id (the one defining `seal_approve`).
-const VEIL_PACKAGE_ID =
-  '0x526e247db2ca1870677b30c8563a691bf7651a97b1d3b79e0caa802a7f60c57b';
+const VEIL_PACKAGE_ID = optionalEnv(
+  'VEIL_PACKAGE_ID',
+  '0x526e247db2ca1870677b30c8563a691bf7651a97b1d3b79e0caa802a7f60c57b'
+);
 
 function toHexId(label: string): string {
   return `0x${Buffer.from(label, 'utf8').toString('hex')}`;
