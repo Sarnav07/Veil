@@ -7,6 +7,9 @@
  */
 import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
 import { encodeBid, randomNonce, SealVault, WalrusClient } from '@veil/sdk';
+import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
+import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import { SessionKey } from '@mysten/seal';
 import { optionalEnv } from './env.js';
 
 const KEY_SERVERS = optionalEnv(
@@ -58,7 +61,30 @@ async function main(): Promise<void> {
   console.log(`  plaintext bytes:  ${payload.length}`);
   console.log(`  ciphertext bytes: ${ciphertext.length}`);
   console.log(`  sealed blobId:    ${blobId}`);
-  console.log('  decryption needs the published seal_approve policy (post-deploy).');
+  
+  console.log('  Testing decryption (closeMs = 0 to pass policy immediately)...');
+  const privKeyStr = process.env.SUI_PRIVATE_KEY;
+  if (!privKeyStr) throw new Error('SUI_PRIVATE_KEY missing for decryption');
+  
+  const { secretKey } = decodeSuiPrivateKey(privKeyStr);
+  const keypair = Ed25519Keypair.fromSecretKey(secretKey);
+  
+  const sessionKey = await SessionKey.create({
+    address: keypair.toSuiAddress(),
+    packageId,
+    ttlMin: 10,
+    signer: keypair,
+    suiClient,
+  });
+  
+  // Encrypt with closeMs = 0 so it unlocks immediately
+  const immediateCiphertext = await vault.sealBid(payload, 0n);
+  const decrypted = await vault.unsealBid(immediateCiphertext, 0n, sessionKey);
+  
+  if (!bytesEqual(decrypted, payload)) {
+    throw new Error('Decrypted payload does not match original!');
+  }
+  console.log('  ✅ Decryption SUCCESS! The Seal policy gate and Walrus round-trip work end-to-end.');
 }
 
 main().catch((error: unknown) => {

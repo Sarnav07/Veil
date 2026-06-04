@@ -16,6 +16,9 @@ import {
 } from '@veil/sdk';
 import { buildLaunchSettleArrays, printLaunchSettle, type RevealedEntry } from './keeper.js';
 import { optionalEnv } from './env.js';
+import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
+import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import { SessionKey } from '@mysten/seal';
 
 const KEY_SERVERS = optionalEnv(
   'SEAL_KEY_SERVER_OBJECT_IDS',
@@ -37,7 +40,7 @@ async function main(): Promise<void> {
   // only runs once the veil package is published and its id is exported.
   const packageId = process.env.VEIL_PACKAGE_ID?.trim();
 
-  const closeMs = 1_750_000_000_000n;
+  const closeMs = 0n; // 0 for immediate unlock during the live spike
 
   // Encode bids and compute commitments offline — no network needed.
   const encoded = await Promise.all(
@@ -88,10 +91,30 @@ async function main(): Promise<void> {
     console.log(`  [${i}] blobId=${blobId}`);
   }
 
-  console.log('\nBids stored. Reveal arrays settle would take:');
-  // After close, the keeper fetches + decrypts; here we use the already-known
-  // plaintexts to show the array shapes without a second network round-trip.
-  const entries: RevealedEntry[] = encoded.map(({ payload }, index) => ({ index, plaintext: payload }));
+  console.log('\nTesting decryption (keeper flow):');
+  const privKeyStr = process.env.SUI_PRIVATE_KEY;
+  if (!privKeyStr) throw new Error('SUI_PRIVATE_KEY missing for decryption');
+  
+  const { secretKey } = decodeSuiPrivateKey(privKeyStr);
+  const keypair = Ed25519Keypair.fromSecretKey(secretKey);
+  
+  const sessionKey = await SessionKey.create({
+    address: keypair.toSuiAddress(),
+    packageId,
+    ttlMin: 10,
+    signer: keypair,
+    suiClient,
+  });
+
+  const entries: RevealedEntry[] = [];
+  for (const { index, blobId } of stored) {
+    console.log(`  Fetching + decrypting blob ${blobId}...`);
+    const ciphertext = await walrus.read(blobId);
+    const plaintext = await vault.unsealBid(ciphertext, closeMs, sessionKey);
+    entries.push({ index, plaintext });
+  }
+
+  console.log('\n✅ Bids fetched and decrypted! Reveal arrays settle would take:');
   printLaunchSettle(buildLaunchSettleArrays(entries));
 
   console.log('\nOn-chain the chain sees only:');
