@@ -158,13 +158,13 @@ ordering all check out, and the suite is green._
 
 ## 5. Immediate next steps (priority order)
 
-1. **Build the demo frontend (`docs/DEMO.md` S1–S4) starting with `ChainSeesPanel` +
+1. **Wire the archive into settle and add a Tatum Data API read.** _Why:_ these are the two
+   remaining "DeFi + **Data**" / Walrus + Tatum (30%) surfaces — an archive blob emitted at
+   settlement and a price/mark-to-market reference — both currently stubbed in the SDK but
+   never called from a real flow.
+
+2. **Build the demo frontend (`docs/DEMO.md` S1–S4) starting with `ChainSeesPanel` +
    `SniperPane`.** _Why:_ the "what the chain sees" reveal is the product's whole pitch and
    carries Presentation (20%) + Creativity (20%); the dapp-kit shell already exists, so
    this is additive. Include the seed/fast-clock mode so the demo video doesn't wait on
    real timers.
-
-2. **Wire the archive into settle and add a Tatum Data API read.** _Why:_ these are the two
-   remaining "DeFi + **Data**" / Walrus + Tatum (30%) surfaces — an archive blob emitted at
-   settlement and a price/mark-to-market reference — both currently stubbed in the SDK but
-   never called from a real flow.
