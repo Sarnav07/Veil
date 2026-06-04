@@ -19,7 +19,7 @@ import { optionalEnv, requireEnv } from './env.js';
 // The published `veil` package id (the one defining `seal_approve`).
 const VEIL_PACKAGE_ID = optionalEnv(
   'VEIL_PACKAGE_ID',
-  '0x526e247db2ca1870677b30c8563a691bf7651a97b1d3b79e0caa802a7f60c57b'
+  '0x67b75f6c83a888d8736f47297c1a2e7212e8d8b8b4d1062aace46d024d22e30c'
 );
 
 function toHexId(label: string): string {

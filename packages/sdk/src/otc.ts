@@ -51,3 +51,8 @@ export function encodeReserve({ reserve, reserveNonce }: ReservePayload): Uint8A
   return encodeBid(payload);
 }
 
+/** Decode bytes (from Walrus) back into a typed reserve payload. */
+export function decodeReserve(bytes: Uint8Array): ReservePayload {
+  const price = BigInt(bcs.u64().parse(bytes.subarray(0, 8)));
+  return { reserve: price, reserveNonce: bytes.subarray(8) };
+}

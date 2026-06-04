@@ -54,8 +54,8 @@ fun best_of_three_wins_at_its_price() {
         let token = make_token(ctx);
         veil_otc::create<Token>(
             token,
-            reserve_val,
-            reserve_nonce,
+            reserve_commit(reserve_val, reserve_nonce),
+            b"reserveBlobId",
             5_000,
             DEPOSIT,
             &clk,
@@ -173,8 +173,8 @@ fun reserve_not_met_returns_asset_and_refunds_all() {
         let token = make_token(ctx);
         veil_otc::create<Token>(
             token,
-            reserve_val,
-            reserve_nonce,
+            reserve_commit(reserve_val, reserve_nonce),
+            b"reserveBlobId",
             5_000,
             DEPOSIT,
             &clk,
@@ -261,8 +261,8 @@ fun forged_reveal_aborts() {
         let token = make_token(ctx);
         veil_otc::create<Token>(
             token,
-            reserve_val,
-            reserve_nonce,
+            reserve_commit(reserve_val, reserve_nonce),
+            b"reserveBlobId",
             5_000,
             DEPOSIT,
             &clk,
@@ -322,8 +322,8 @@ fun reserve_stays_hidden_until_settle() {
         let token = make_token(ctx);
         veil_otc::create<Token>(
             token,
-            reserve_val,
-            reserve_nonce,
+            reserve_commit(reserve_val, reserve_nonce),
+            b"reserveBlobId",
             5_000,
             DEPOSIT,
             &clk,

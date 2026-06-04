@@ -35,13 +35,13 @@ docs/             DEMO.md (visual scope + storyboard)
 
 - **On-chain Contracts**: 100% complete, fully unit-tested (31/31), and deployed to Sui Testnet.
 - **Off-chain SDK**: 100% complete. Handles creating transactions, encrypting bids via Seal, and fetching fiat data from Tatum.
-- **Keeper Orchestrator**: 100% complete. A fully automated backend loop that pulls encrypted blobs from Walrus, evaluates the Seal release policy on-chain, and settles the trade.
+- **Keeper Orchestrator**: 100% complete. A fully automated backend loop that pulls encrypted blobs from Walrus, evaluates the Seal release policy on-chain, and settles the trade. *Note on Security: The Keeper serves a trusted-liveness (not trusted-integrity) role. Because settlement re-hashes commitments before any funds move, the Keeper cannot forge or inflate reveal values.*
 - **Frontend App**: **Work in Progress.**
 
 ## Quickstart
 
 Prerequisites: Node ≥ 20, pnpm 9, the [Sui CLI](https://docs.sui.io/guides/developer/getting-started/sui-install),
-and a free [Tatum API key](https://dashboard.tatum.io).
+and a free [Tatum API key](https://dashboard.tatum.io). *(Toolchain verified on `sui 1.73.0`, `node v20.x`, `pnpm 9.x`)*.
 
 ```bash
 pnpm install

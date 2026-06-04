@@ -47,6 +47,8 @@ public struct Rfq<phantom T: store> has key {
     close_ms: u64,
     deposit: u64,
     quotes: vector<Quote>,
+    reserve_blob_id: vector<u8>,
+    archive_blob_id: Option<vector<u8>>,
 }
 
 public struct RfqCreated has copy, drop {
@@ -70,21 +72,23 @@ public struct RfqSettled has copy, drop {
     reserve_met: bool,
 }
 
+public struct ArchiveLinked has copy, drop {
+    rfq: ID,
+    blob_id: vector<u8>,
+}
+
 /// Build an Rfq without sharing it. `reserve` and `reserve_nonce` are hashed
 /// together so the true floor price cannot be read from chain state.
 public fun new<T: store>(
     asset: Coin<T>,
-    reserve: u64,
-    reserve_nonce: vector<u8>,
+    reserve_commitment: vector<u8>,
+    reserve_blob_id: vector<u8>,
     close_ms: u64,
     deposit: u64,
     clock: &Clock,
     ctx: &mut TxContext,
 ): Rfq<T> {
     assert!(close_ms > clock.timestamp_ms(), EBadCloseTime);
-    let mut preimage = std::bcs::to_bytes(&reserve);
-    vector::append(&mut preimage, reserve_nonce);
-    let reserve_commitment = std::hash::sha2_256(preimage);
     let rfq = Rfq {
         id: object::new(ctx),
         maker: ctx.sender(),
@@ -94,6 +98,8 @@ public fun new<T: store>(
         close_ms,
         deposit,
         quotes: vector[],
+        reserve_blob_id,
+        archive_blob_id: option::none(),
     };
     event::emit(RfqCreated {
         rfq: object::id(&rfq),
@@ -107,14 +113,14 @@ public fun new<T: store>(
 /// Create and share an Rfq in one call.
 public fun create<T: store>(
     asset: Coin<T>,
-    reserve: u64,
-    reserve_nonce: vector<u8>,
+    reserve_commitment: vector<u8>,
+    reserve_blob_id: vector<u8>,
     close_ms: u64,
     deposit: u64,
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
-    transfer::share_object(new(asset, reserve, reserve_nonce, close_ms, deposit, clock, ctx));
+    transfer::share_object(new(asset, reserve_commitment, reserve_blob_id, close_ms, deposit, clock, ctx));
 }
 
 /// Submit a sealed quote: escrow exactly the required deposit and record the
@@ -257,6 +263,15 @@ fun send_or_destroy(funds: Balance<SUI>, to: address, ctx: &mut TxContext) {
     } else {
         balance::destroy_zero(funds);
     };
+}
+
+/// Allows the keeper to attach the Walrus blob ID containing the settlement archive.
+/// This acts as a decentralized audit trail pointing back to the encrypted inputs and outcomes.
+public fun add_archive<T: store>(rfq: &mut Rfq<T>, blob_id: vector<u8>) {
+    assert!(rfq.state == STATE_SETTLED, EWrongState);
+    assert!(option::is_none(&rfq.archive_blob_id), EWrongState); // can only be set once
+    option::fill(&mut rfq.archive_blob_id, blob_id);
+    event::emit(ArchiveLinked { rfq: object::id(rfq), blob_id });
 }
 
 public fun state<T: store>(rfq: &Rfq<T>): u8 { rfq.state }

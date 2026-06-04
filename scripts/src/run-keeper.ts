@@ -10,6 +10,7 @@ import {
   OtcTxBuilder,
   TatumClient,
   encodeArchive,
+  decodeReserve,
   type ArchiveRecord,
 } from '@veil/sdk';
 import { optionalEnv } from './env.js';
@@ -163,19 +164,24 @@ async function main() {
     
     const arrays = buildOtcSettleArrays(entries);
     
-    // For OTC, we need the maker's reserve & reserveNonce to settle.
-    // However, the keeper doesn't have the plaintext reserve/reserveNonce!
-    // The maker must provide them. In a real system, the maker runs the keeper 
-    // or provides a sealed envelope with the reserve.
-    // Since the keeper runs universally, let's look for env vars for the reserve just for this script,
-    // or fail if it's OTC and we don't have them.
-    const reserveStr = process.env.OTC_RESERVE;
-    const reserveNonceHex = process.env.OTC_RESERVE_NONCE;
-    if (!reserveStr || !reserveNonceHex) {
-      throw new Error("OTC settle requires OTC_RESERVE and OTC_RESERVE_NONCE in env to open the reserve commitment!");
+    // The maker encrypted the reserve payload and stored it on Walrus.
+    // The Rfq object has the reserve_blob_id. We fetch and unseal it just like quotes.
+    const reserveBlobIdBytes = fields.reserve_blob_id as number[];
+    const reserveBlobIdStr = new TextDecoder().decode(new Uint8Array(reserveBlobIdBytes));
+    console.log(`  Fetching & decrypting reserve blob ${reserveBlobIdStr}...`);
+    let reserve = BigInt(0);
+    let reserveNonce = new Uint8Array(0);
+    try {
+      const reserveCiphertext = await walrus.read(reserveBlobIdStr);
+      const reservePlaintext = await vault.unsealBid(reserveCiphertext, closeMs, sessionKey);
+      const decoded = decodeReserve(reservePlaintext);
+      reserve = decoded.reserve;
+      reserveNonce = decoded.reserveNonce;
+      console.log(`  Unsealed maker's reserve floor successfully.`);
+    } catch (err) {
+      console.error(`Failed to unseal reserve blob:`, err);
+      throw new Error("Cannot settle OTC without successfully decrypting the maker's reserve.");
     }
-    const reserve = BigInt(reserveStr);
-    const reserveNonce = new Uint8Array(Buffer.from(reserveNonceHex, 'hex'));
 
     if (state === 0) {
       console.log('Appending close() to PTB...');
@@ -241,6 +247,25 @@ async function main() {
             const bytes = encodeArchive(record);
             const archiveBlobId = await walrus.store(bytes);
             console.log(`Archived settlement record to Walrus! Blob ID: ${archiveBlobId}`);
+            
+            console.log('Linking archive blob ID on-chain...');
+            const linkTx = new Transaction();
+            const archiveBlobIdBytes = new TextEncoder().encode(archiveBlobId);
+            if (type === 'launch') {
+              LaunchTxBuilder.addArchive(linkTx, packageId, { sale: objectId, blobId: archiveBlobIdBytes, coinType });
+            } else {
+              OtcTxBuilder.addArchive(linkTx, packageId, { rfq: objectId, blobId: archiveBlobIdBytes, coinType });
+            }
+            const linkRes = await suiClient.signAndExecuteTransaction({
+              transaction: linkTx,
+              signer: keypair,
+              options: { showEffects: true }
+            });
+            if (linkRes.effects?.status.status === 'success') {
+              console.log(`✅ On-chain archive trail linked! Digest: ${linkRes.digest}`);
+            } else {
+              console.error(`❌ Failed to link archive on-chain:`, linkRes.effects?.status.error);
+            }
           } catch (err: any) {
             console.error(`Failed to store archive blob to Walrus:`, err.message);
           }
@@ -254,6 +279,8 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('❌ Keeper failed:', err instanceof Error ? err.message : 'Unknown error');
+  // Security: log only the error name to prevent accidentally surfacing process.env
+  // if an unhandled crash or network error includes the request context.
+  console.error('❌ Keeper failed with error type:', err instanceof Error ? err.name : 'UnknownError');
   process.exit(1);
 });

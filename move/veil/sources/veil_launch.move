@@ -43,6 +43,7 @@ public struct Sale<phantom T: store> has key {
     close_ms: u64,
     deposit: u64,
     bids: vector<Bid>,
+    archive_blob_id: Option<vector<u8>>,
 }
 
 public struct SaleCreated has copy, drop {
@@ -65,6 +66,11 @@ public struct SaleSettled has copy, drop {
     bid_count: u64,
 }
 
+public struct ArchiveLinked has copy, drop {
+    sale: ID,
+    blob_id: vector<u8>,
+}
+
 public fun new<T: store>(
     supply: Coin<T>,
     close_ms: u64,
@@ -81,6 +87,7 @@ public fun new<T: store>(
         close_ms,
         deposit,
         bids: vector[],
+        archive_blob_id: option::none(),
     };
     event::emit(SaleCreated {
         sale: object::id(&sale),
@@ -230,6 +237,15 @@ fun send_or_destroy_token<T: store>(funds: Balance<T>, to: address, ctx: &mut Tx
     } else {
         balance::destroy_zero(funds);
     };
+}
+
+/// Allows the keeper to attach the Walrus blob ID containing the settlement archive.
+/// This acts as a decentralized audit trail pointing back to the encrypted inputs and outcomes.
+public fun add_archive<T: store>(sale: &mut Sale<T>, blob_id: vector<u8>) {
+    assert!(sale.state == STATE_SETTLED, EWrongState);
+    assert!(option::is_none(&sale.archive_blob_id), EWrongState); // can only be set once
+    option::fill(&mut sale.archive_blob_id, blob_id);
+    event::emit(ArchiveLinked { sale: object::id(sale), blob_id });
 }
 
 public fun state<T: store>(sale: &Sale<T>): u8 { sale.state }

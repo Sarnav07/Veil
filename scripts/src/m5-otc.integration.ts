@@ -8,6 +8,9 @@
 import { getFullnodeUrl, SuiClient } from '@mysten/sui/client';
 import {
   encodeQuote,
+  encodeReserve,
+  generateReserve,
+  decodeReserve,
   commit,
   randomNonce,
   toHex,
@@ -52,6 +55,11 @@ async function main(): Promise<void> {
     }),
   );
 
+  const makerReserve = 4_000_000n;
+  const reservePayload = generateReserve(makerReserve);
+  const encodedReserveBytes = encodeReserve(reservePayload);
+  const reserveCommitment = await commit(encodedReserveBytes);
+
   console.log('Encoded OTC quotes:');
   for (const [i, q] of encoded.entries()) {
     console.log(
@@ -59,6 +67,9 @@ async function main(): Promise<void> {
         `  commitment=0x${toHex(q.commitment).slice(0, 16)}…`,
     );
   }
+  console.log('\nEncoded OTC Reserve (maker):');
+  console.log(`  reserve=${makerReserve} MIST`);
+  console.log(`  commitment=0x${toHex(reserveCommitment).slice(0, 16)}…`);
 
   if (!packageId) {
     console.log(
@@ -90,6 +101,10 @@ async function main(): Promise<void> {
     stored.push({ index: i, blobId });
     console.log(`  [${i}] blobId=${blobId}`);
   }
+  console.log('\nSeal + Walrus round-trip for maker reserve:');
+  const reserveCiphertext = await vault.sealBid(encodedReserveBytes, closeMs);
+  const reserveBlobId = await walrus.store(reserveCiphertext);
+  console.log(`  reserveBlobId=${reserveBlobId}`);
 
   console.log('\nTesting decryption (keeper flow):');
   const privKeyStr = process.env.SUI_PRIVATE_KEY;
@@ -108,11 +123,17 @@ async function main(): Promise<void> {
 
   const entries: RevealedEntry[] = [];
   for (const { index, blobId } of stored) {
-    console.log(`  Fetching + decrypting blob ${blobId}...`);
+    console.log(`  Fetching + decrypting quote blob ${blobId}...`);
     const ciphertext = await walrus.read(blobId);
     const plaintext = await vault.unsealBid(ciphertext, closeMs, sessionKey);
     entries.push({ index, plaintext });
   }
+
+  console.log(`  Fetching + decrypting reserve blob ${reserveBlobId}...`);
+  const fetchedReserveCiphertext = await walrus.read(reserveBlobId);
+  const fetchedReservePlaintext = await vault.unsealBid(fetchedReserveCiphertext, closeMs, sessionKey);
+  const decodedReserve = decodeReserve(fetchedReservePlaintext);
+  console.log(`  Unsealed reserve: ${decodedReserve.reserve} MIST`);
 
   console.log('\n✅ Quotes fetched and decrypted! Reveal arrays settle would take:');
   printOtcSettle(buildOtcSettleArrays(entries));
