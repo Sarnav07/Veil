@@ -14,11 +14,11 @@ export class TatumClient {
       throw new Error(`Tatum Data API error: ${res.status} ${res.statusText}`);
     }
     
-    const data = await res.json();
-    if (!data || !data.value) {
+    const data = (await res.json()) as { value?: string } | null;
+    if (!data?.value) {
       throw new Error(`Tatum Data API returned unexpected format: ${JSON.stringify(data)}`);
     }
-    
+
     return parseFloat(data.value);
   }
 }
