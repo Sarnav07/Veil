@@ -78,6 +78,7 @@ One sealed-bid engine; two apps on top: **VEIL-Launch** (anti-snipe token sales)
   - `seal.ts`: `SealVault.sealBid` (encrypt to `timeLockId(closeMs)`) and `unsealBid`
     (builds the `seal_approve` PTB with clock `0x6`). `timeLockId` matches the Move side.
   - `archive.ts`: `encodeArchive`/`decodeArchive` JSON record for the trade archive.
+  - `tatum.ts`: `TatumClient.getExchangeRate` integration fetching live mark-to-market prices.
 
 - **`@veil/scripts` (`scripts/src/`)** — runnable spikes, all typechecking:
   - `tatum-rpc.spike.ts` — Sui RPC reachability through the Tatum gateway (chain id +
@@ -114,11 +115,7 @@ One sealed-bid engine; two apps on top: **VEIL-Launch** (anti-snipe token sales)
   (S1–S4, `ChainSeesPanel`, `SealPipeline`, `SniperPane`, `CountdownRing`, `BlobChip`,
   `ResultCard`, `TatumStatusBadge`) exist.
 
-- **Trade archive.** `archive.ts` encode/decode works and round-trips on Walrus in `m2`,
-  but it is **not wired into any settle flow** — no Move `settle` emits or stores an
-  archive blob, and no TS path calls `encodeArchive` after a settlement.
 
----
 
 ## 3. What is broken or will not run as-is
 
@@ -142,9 +139,6 @@ ordering all check out, and the suite is green._
 ---
 
 ## 4. What is left to build (referenced/implied but absent)
-- **Archive-on-settle** — emit/store an `ArchiveRecord` when an auction/sale/RFQ settles.
-- **Tatum Data API integration** — `IMPLEMENTATION_PLAN.md:53` and `docs/STATUS.md` call
-  for price/mark-to-market reads; only RPC reachability (`tatum-rpc.spike.ts`) exists.
 - **Frontend screens & components** — the entire `docs/DEMO.md` inventory, plus the
   seed/fast-clock demo mode.
 - **Whitepaper** — `docs/WHITEPAPER.md` (`IMPLEMENTATION_PLAN.md:123`), a submission
@@ -158,12 +152,7 @@ ordering all check out, and the suite is green._
 
 ## 5. Immediate next steps (priority order)
 
-1. **Wire the archive into settle and add a Tatum Data API read.** _Why:_ these are the two
-   remaining "DeFi + **Data**" / Walrus + Tatum (30%) surfaces — an archive blob emitted at
-   settlement and a price/mark-to-market reference — both currently stubbed in the SDK but
-   never called from a real flow.
-
-2. **Build the demo frontend (`docs/DEMO.md` S1–S4) starting with `ChainSeesPanel` +
+1. **Build the demo frontend (`docs/DEMO.md` S1–S4) starting with `ChainSeesPanel` +
    `SniperPane`.** _Why:_ the "what the chain sees" reveal is the product's whole pitch and
    carries Presentation (20%) + Creativity (20%); the dapp-kit shell already exists, so
    this is additive. Include the seed/fast-clock mode so the demo video doesn't wait on

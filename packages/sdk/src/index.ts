@@ -5,3 +5,4 @@ export * from './seal.js';
 export * from './launch.js';
 export * from './otc.js';
 export * from './tx.js';
+export * from './tatum.js';

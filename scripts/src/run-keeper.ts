@@ -8,6 +8,9 @@ import {
   WalrusClient,
   LaunchTxBuilder,
   OtcTxBuilder,
+  TatumClient,
+  encodeArchive,
+  type ArchiveRecord,
 } from '@veil/sdk';
 import { optionalEnv } from './env.js';
 import {
@@ -46,6 +49,9 @@ async function main() {
   const keypair = Ed25519Keypair.fromSecretKey(secretKey);
 
   const suiClient = new SuiClient({ url: getFullnodeUrl('testnet') });
+  const tatumApiKey = process.env.TATUM_API_KEY;
+  if (!tatumApiKey) throw new Error('TATUM_API_KEY missing for Data API');
+  const tatum = new TatumClient(tatumApiKey);
   const walrus = new WalrusClient({
     publisherUrl: optionalEnv('WALRUS_PUBLISHER_URL', 'https://publisher.walrus-testnet.walrus.space'),
     aggregatorUrl: optionalEnv('WALRUS_AGGREGATOR_URL', 'https://aggregator.walrus-testnet.walrus.space'),
@@ -202,6 +208,42 @@ async function main() {
       for (const ev of res.events) {
         if (ev.type.includes('SaleSettled') || ev.type.includes('RfqSettled')) {
           console.log(`Settled Event:`, ev.parsedJson);
+          
+          // Data API Integration
+          console.log('\n--- DeFi + Data Integration ---');
+          const dataJson = ev.parsedJson as any;
+          const price = dataJson.clearing_price || dataJson.price || 0;
+          const winner = dataJson.winner || 'Multiple (Launch)';
+          const count = dataJson.bid_count || dataJson.quote_count || 0;
+          
+          try {
+            const suiUsd = await tatum.getExchangeRate('SUI', 'USD');
+            const priceInSui = Number(price) / 1_000_000_000;
+            const priceInUsd = priceInSui * suiUsd;
+            
+            console.log(`Tatum Data API: Current SUI price is $${suiUsd.toFixed(4)} USD`);
+            console.log(`Mark-to-Market: Clearing price of ${priceInSui} SUI is ~$${priceInUsd.toFixed(4)} USD`);
+          } catch (err: any) {
+            console.error(`Failed to fetch Tatum Data API:`, err.message);
+          }
+
+          // Archive-on-settle Integration
+          console.log('\n--- Archive-on-Settle Integration ---');
+          const record: ArchiveRecord = {
+            auctionId: objectId,
+            winner,
+            price: price.toString(),
+            bidCount: Number(count),
+            settledAtMs: Date.now()
+          };
+          
+          try {
+            const bytes = encodeArchive(record);
+            const archiveBlobId = await walrus.store(bytes);
+            console.log(`Archived settlement record to Walrus! Blob ID: ${archiveBlobId}`);
+          } catch (err: any) {
+            console.error(`Failed to store archive blob to Walrus:`, err.message);
+          }
         }
       }
     }
