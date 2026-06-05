@@ -59,9 +59,6 @@ export function useActiveListings() {
   // Sort by closest to closing
   listings.sort((a, b) => a.closesMs - b.closesMs);
 
-  // Filter out closed ones? For this PoC let's show all or just ones in the future
-  const activeListings = listings.filter((l) => l.closesMs > Date.now());
-
   // -----------------------------------------------------
   // DEMO DATA INJECTION
   // Always ensure the dashboard looks alive and active
@@ -72,7 +69,7 @@ export function useActiveListings() {
     { id: '0xbe1d4a7f0c3e6b9d2a5f8c1e4b7d0a3f6c9e2b5d8a1f4c7e0b3d6a9f2c5e8b1d', type: 'launch', label: 'Token Launch', deposit: '10000 SUI', closesMs: Date.now() + 1000 * 60 * 60 * 48 },
   ];
 
-  const finalResult = activeListings.length > 0 ? activeListings : DEMO_LISTINGS;
+  const finalResult = listings.length > 0 ? listings : DEMO_LISTINGS;
 
   return { listings: finalResult, isLoading };
 }

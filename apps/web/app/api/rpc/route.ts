@@ -30,7 +30,17 @@ export async function POST(request: Request) {
   if (apiKey) headers['x-api-key'] = apiKey;
 
   try {
-    const upstream = await fetch(target, { method: 'POST', headers, body });
+    let upstream = await fetch(target, { method: 'POST', headers, body });
+    
+    // Fallback to public node if Tatum rate limits us (429) or gives 5xx
+    if (apiKey && (upstream.status === 429 || upstream.status >= 500)) {
+      upstream = await fetch(PUBLIC_FALLBACK_RPC, { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body 
+      });
+    }
+
     const text = await upstream.text();
     return new NextResponse(text, {
       status: upstream.status,

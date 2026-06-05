@@ -37,7 +37,7 @@ public struct Quote has store {
 
 /// The reserve is stored as sha2_256(bcs(reserve) || nonce) so it cannot be
 /// read from chain state before settle. The maker reveals the preimage in settle.
-public struct Rfq<phantom T: store> has key {
+public struct Rfq<phantom T> has key {
     id: UID,
     maker: address,
     asset: Option<Coin<T>>,
@@ -79,7 +79,7 @@ public struct ArchiveLinked has copy, drop {
 
 /// Build an Rfq without sharing it. `reserve` and `reserve_nonce` are hashed
 /// together so the true floor price cannot be read from chain state.
-public fun new<T: store>(
+public fun new<T>(
     asset: Coin<T>,
     reserve_commitment: vector<u8>,
     reserve_blob_id: vector<u8>,
@@ -111,7 +111,7 @@ public fun new<T: store>(
 }
 
 /// Create and share an Rfq in one call.
-public fun create<T: store>(
+public fun create<T>(
     asset: Coin<T>,
     reserve_commitment: vector<u8>,
     reserve_blob_id: vector<u8>,
@@ -125,7 +125,7 @@ public fun create<T: store>(
 
 /// Submit a sealed quote: escrow exactly the required deposit and record the
 /// commitment + Walrus blob id. The quoted price stays hidden in the encrypted blob.
-public fun submit_quote<T: store>(
+public fun submit_quote<T>(
     rfq: &mut Rfq<T>,
     deposit: Coin<SUI>,
     blob_id: vector<u8>,
@@ -147,7 +147,7 @@ public fun submit_quote<T: store>(
     event::emit(QuoteSubmitted { rfq: object::id(rfq), quoter });
 }
 
-public fun close<T: store>(rfq: &mut Rfq<T>, clock: &Clock) {
+public fun close<T>(rfq: &mut Rfq<T>, clock: &Clock) {
     assert!(rfq.state == STATE_QUOTING, EWrongState);
     assert!(clock.timestamp_ms() >= rfq.close_ms, EQuotingStillOpen);
     rfq.state = STATE_REVEALING;
@@ -157,7 +157,7 @@ public fun close<T: store>(rfq: &mut Rfq<T>, clock: &Clock) {
 /// commitment. `reserve` and `reserve_nonce` must open the maker's reserve
 /// commitment. The highest quote at or above `reserve` wins first-price; if the
 /// reserve is not met the asset returns to the maker and all deposits refund.
-public fun settle<T: store>(
+public fun settle<T>(
     rfq: &mut Rfq<T>,
     prices: vector<u64>,
     nonces: vector<vector<u8>>,
@@ -267,34 +267,34 @@ fun send_or_destroy(funds: Balance<SUI>, to: address, ctx: &mut TxContext) {
 
 /// Allows the keeper to attach the Walrus blob ID containing the settlement archive.
 /// This acts as a decentralized audit trail pointing back to the encrypted inputs and outcomes.
-public fun add_archive<T: store>(rfq: &mut Rfq<T>, blob_id: vector<u8>) {
+public fun add_archive<T>(rfq: &mut Rfq<T>, blob_id: vector<u8>) {
     assert!(rfq.state == STATE_SETTLED, EWrongState);
     assert!(option::is_none(&rfq.archive_blob_id), EWrongState); // can only be set once
     option::fill(&mut rfq.archive_blob_id, blob_id);
     event::emit(ArchiveLinked { rfq: object::id(rfq), blob_id });
 }
 
-public fun state<T: store>(rfq: &Rfq<T>): u8 { rfq.state }
+public fun state<T>(rfq: &Rfq<T>): u8 { rfq.state }
 
-public fun quote_count<T: store>(rfq: &Rfq<T>): u64 {
+public fun quote_count<T>(rfq: &Rfq<T>): u64 {
     vector::length(&rfq.quotes)
 }
 
-public fun close_ms<T: store>(rfq: &Rfq<T>): u64 { rfq.close_ms }
+public fun close_ms<T>(rfq: &Rfq<T>): u64 { rfq.close_ms }
 
-public fun deposit<T: store>(rfq: &Rfq<T>): u64 { rfq.deposit }
+public fun deposit<T>(rfq: &Rfq<T>): u64 { rfq.deposit }
 
 /// Returns the reserve commitment hash — the true reserve stays hidden until settle.
-public fun reserve<T: store>(rfq: &Rfq<T>): vector<u8> { rfq.reserve_commitment }
+public fun reserve<T>(rfq: &Rfq<T>): vector<u8> { rfq.reserve_commitment }
 
-public fun quoter<T: store>(rfq: &Rfq<T>, index: u64): address {
+public fun quoter<T>(rfq: &Rfq<T>, index: u64): address {
     vector::borrow(&rfq.quotes, index).quoter
 }
 
-public fun quote_blob_id<T: store>(rfq: &Rfq<T>, index: u64): vector<u8> {
+public fun quote_blob_id<T>(rfq: &Rfq<T>, index: u64): vector<u8> {
     vector::borrow(&rfq.quotes, index).blob_id
 }
 
-public fun quote_commitment<T: store>(rfq: &Rfq<T>, index: u64): vector<u8> {
+public fun quote_commitment<T>(rfq: &Rfq<T>, index: u64): vector<u8> {
     vector::borrow(&rfq.quotes, index).commitment
 }

@@ -35,7 +35,7 @@ public struct Bid has store {
     commitment: vector<u8>,
 }
 
-public struct Sale<phantom T: store> has key {
+public struct Sale<phantom T> has key {
     id: UID,
     seller: address,
     supply: Balance<T>,
@@ -71,7 +71,7 @@ public struct ArchiveLinked has copy, drop {
     blob_id: vector<u8>,
 }
 
-public fun new<T: store>(
+public fun new<T>(
     supply: Coin<T>,
     close_ms: u64,
     deposit: u64,
@@ -99,7 +99,7 @@ public fun new<T: store>(
     sale
 }
 
-public fun create<T: store>(
+public fun create<T>(
     supply: Coin<T>,
     close_ms: u64,
     deposit: u64,
@@ -111,7 +111,7 @@ public fun create<T: store>(
 
 /// Place a sealed bid: escrow exactly the sale's deposit and record the commitment +
 /// Walrus blobId. The (price, quantity) stay hidden in the blob.
-public fun submit_bid<T: store>(
+public fun submit_bid<T>(
     sale: &mut Sale<T>,
     deposit: Coin<SUI>,
     blob_id: vector<u8>,
@@ -133,7 +133,7 @@ public fun submit_bid<T: store>(
     event::emit(BidSubmitted { sale: object::id(sale), bidder });
 }
 
-public fun close<T: store>(sale: &mut Sale<T>, clock: &Clock) {
+public fun close<T>(sale: &mut Sale<T>, clock: &Clock) {
     assert!(sale.state == STATE_BIDDING, EWrongState);
     assert!(clock.timestamp_ms() >= sale.close_ms, EBiddingStillOpen);
     sale.state = STATE_REVEALING;
@@ -144,7 +144,7 @@ public fun close<T: store>(sale: &mut Sale<T>, clock: &Clock) {
 /// price; each winner pays `clearing_price * allocated` from its deposit, receives its
 /// tokens, and is refunded the rest. Losers are fully refunded. The seller collects
 /// the proceeds and any unsold supply.
-public fun settle<T: store>(
+public fun settle<T>(
     sale: &mut Sale<T>,
     prices: vector<u64>,
     quantities: vector<u64>,
@@ -216,7 +216,7 @@ public fun settle<T: store>(
     event::emit(SaleSettled { sale: sale_id, clearing_price, sold, bid_count: n });
 }
 
-fun settle_empty<T: store>(sale: &mut Sale<T>, sale_id: ID, ctx: &mut TxContext) {
+fun settle_empty<T>(sale: &mut Sale<T>, sale_id: ID, ctx: &mut TxContext) {
     let leftover = balance::withdraw_all(&mut sale.supply);
     send_or_destroy_token(leftover, sale.seller, ctx);
     sale.state = STATE_SETTLED;
@@ -231,7 +231,7 @@ fun send_or_destroy(funds: Balance<SUI>, to: address, ctx: &mut TxContext) {
     };
 }
 
-fun send_or_destroy_token<T: store>(funds: Balance<T>, to: address, ctx: &mut TxContext) {
+fun send_or_destroy_token<T>(funds: Balance<T>, to: address, ctx: &mut TxContext) {
     if (balance::value(&funds) > 0) {
         transfer::public_transfer(coin::from_balance(funds, ctx), to);
     } else {
@@ -241,35 +241,35 @@ fun send_or_destroy_token<T: store>(funds: Balance<T>, to: address, ctx: &mut Tx
 
 /// Allows the keeper to attach the Walrus blob ID containing the settlement archive.
 /// This acts as a decentralized audit trail pointing back to the encrypted inputs and outcomes.
-public fun add_archive<T: store>(sale: &mut Sale<T>, blob_id: vector<u8>) {
+public fun add_archive<T>(sale: &mut Sale<T>, blob_id: vector<u8>) {
     assert!(sale.state == STATE_SETTLED, EWrongState);
     assert!(option::is_none(&sale.archive_blob_id), EWrongState); // can only be set once
     option::fill(&mut sale.archive_blob_id, blob_id);
     event::emit(ArchiveLinked { sale: object::id(sale), blob_id });
 }
 
-public fun state<T: store>(sale: &Sale<T>): u8 { sale.state }
+public fun state<T>(sale: &Sale<T>): u8 { sale.state }
 
-public fun bid_count<T: store>(sale: &Sale<T>): u64 {
+public fun bid_count<T>(sale: &Sale<T>): u64 {
     vector::length(&sale.bids)
 }
 
-public fun close_ms<T: store>(sale: &Sale<T>): u64 { sale.close_ms }
+public fun close_ms<T>(sale: &Sale<T>): u64 { sale.close_ms }
 
-public fun deposit<T: store>(sale: &Sale<T>): u64 { sale.deposit }
+public fun deposit<T>(sale: &Sale<T>): u64 { sale.deposit }
 
-public fun supply_remaining<T: store>(sale: &Sale<T>): u64 {
+public fun supply_remaining<T>(sale: &Sale<T>): u64 {
     balance::value(&sale.supply)
 }
 
-public fun bidder<T: store>(sale: &Sale<T>, index: u64): address {
+public fun bidder<T>(sale: &Sale<T>, index: u64): address {
     vector::borrow(&sale.bids, index).bidder
 }
 
-public fun bid_blob_id<T: store>(sale: &Sale<T>, index: u64): vector<u8> {
+public fun bid_blob_id<T>(sale: &Sale<T>, index: u64): vector<u8> {
     vector::borrow(&sale.bids, index).blob_id
 }
 
-public fun bid_commitment<T: store>(sale: &Sale<T>, index: u64): vector<u8> {
+public fun bid_commitment<T>(sale: &Sale<T>, index: u64): vector<u8> {
     vector::borrow(&sale.bids, index).commitment
 }

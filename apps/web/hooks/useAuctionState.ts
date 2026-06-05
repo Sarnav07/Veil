@@ -52,17 +52,28 @@ export function useAuctionState(auctionId: string) {
     // archive_blob_id is an Option<vector<u8>>
     let archiveBlobId: string | null = null;
     if (fields.archive_blob_id) {
-      const isSome = fields.archive_blob_id.type?.includes('::option::Some') ?? fields.archive_blob_id !== null;
-      if (isSome) {
-        // Handle varying representation of Sui Option fields
-        const vec = fields.archive_blob_id.fields?.vec || fields.archive_blob_id;
-        if (Array.isArray(vec) && vec.length > 0) {
-          // Inner value is a vector of u8
-          const bytesArray = vec[0];
-          if (Array.isArray(bytesArray)) {
-            archiveBlobId = new TextDecoder().decode(new Uint8Array(bytesArray));
+      // It can either be an object with { type, fields: { vec: [...] } } or just the array directly
+      let bytesArray: number[] | null = null;
+      
+      if (Array.isArray(fields.archive_blob_id)) {
+        if (fields.archive_blob_id.length > 0 && typeof fields.archive_blob_id[0] === 'number') {
+           bytesArray = fields.archive_blob_id;
+        } else if (fields.archive_blob_id.length > 0 && Array.isArray(fields.archive_blob_id[0])) {
+           bytesArray = fields.archive_blob_id[0];
+        }
+      } else if (fields.archive_blob_id.fields?.vec && Array.isArray(fields.archive_blob_id.fields.vec)) {
+        const vec = fields.archive_blob_id.fields.vec;
+        if (vec.length > 0) {
+          if (Array.isArray(vec[0])) {
+             bytesArray = vec[0];
+          } else if (typeof vec[0] === 'number') {
+             bytesArray = vec;
           }
         }
+      }
+
+      if (bytesArray) {
+        archiveBlobId = new TextDecoder().decode(new Uint8Array(bytesArray));
       }
     }
 
