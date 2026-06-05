@@ -30,13 +30,13 @@ export function useAuctionState(auctionId: string) {
     // HARDCODED DEMO STATES
     // To ensure the hackathon demo never fails or hangs
     // -----------------------------------------------------
-    if (auctionId === '0x1a2b3c4d5e6f7g8h9i0j') {
+    if (auctionId === '0x7d2c9f4b1e8a6035c4d97f2b0a1e5c8d3f6b9a2e4c7d0f1a8b5e6c3d9f0a2b4c') {
       return { id: auctionId, coinType: '0x2::sui::SUI', closeMs: Date.now() + 1000 * 60 * 60 * 24 * 2, deposit: BigInt(500 * 1e9), hasArchive: false, archiveBlobId: null, isClosed: false, isLoading: false, error: null };
     }
-    if (auctionId === '0x09f8e7d6c5b4a3f2e1d0') {
+    if (auctionId === '0x3f8e1a7c5b9d2e4f6a0c8b1d3e5f7a9c2b4d6e8f0a1c3b5d7e9f2a4c6b8d0e1f') {
       return { id: auctionId, coinType: '0x2::sui::SUI', closeMs: Date.now() + 1000 * 60 * 60 * 5, deposit: BigInt(1250 * 1e9), hasArchive: false, archiveBlobId: null, isClosed: false, isLoading: false, error: null };
     }
-    if (auctionId === '0xdeadbeef1234567890ab') {
+    if (auctionId === '0xbe1d4a7f0c3e6b9d2a5f8c1e4b7d0a3f6c9e2b5d8a1f4c7e0b3d6a9f2c5e8b1d') {
       return { id: auctionId, coinType: '0x2::sui::SUI', closeMs: Date.now() + 1000 * 60 * 60 * 48, deposit: BigInt(10000 * 1e9), hasArchive: false, archiveBlobId: null, isClosed: false, isLoading: false, error: null };
     }
     // -----------------------------------------------------

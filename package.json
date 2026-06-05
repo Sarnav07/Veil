@@ -9,6 +9,9 @@
     "node": ">=20"
   },
   "scripts": {
+    "dev": "pnpm --filter @veil/web dev",
+    "build": "pnpm --filter @veil/web build",
+    "start": "pnpm --filter @veil/web start",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "pnpm -r --if-present lint",
     "spike:tatum": "pnpm --filter @veil/scripts spike:tatum",

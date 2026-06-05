@@ -2,7 +2,7 @@ import { SealClient, type SessionKey } from '@mysten/seal';
 import { bcs } from '@mysten/sui/bcs';
 import type { SuiClient } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';
-import { toHex } from './bid';
+import { toHex } from './bid.js';
 
 export interface SealConfig {
   suiClient: SuiClient;

@@ -170,7 +170,7 @@ async function main() {
     const reserveBlobIdStr = new TextDecoder().decode(new Uint8Array(reserveBlobIdBytes));
     console.log(`  Fetching & decrypting reserve blob ${reserveBlobIdStr}...`);
     let reserve = BigInt(0);
-    let reserveNonce = new Uint8Array(0);
+    let reserveNonce: Uint8Array = new Uint8Array(0);
     try {
       const reserveCiphertext = await walrus.read(reserveBlobIdStr);
       const reservePlaintext = await vault.unsealBid(reserveCiphertext, closeMs, sessionKey);

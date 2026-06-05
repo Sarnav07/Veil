@@ -100,3 +100,10 @@
     100% { background-position: 0 140px, 0 140px; }
   }
 }
+
+/* Streamed activity-feed rows slide + fade in for a live network feel */
+@keyframes feed-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.feed-in { animation: feed-in 320ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }

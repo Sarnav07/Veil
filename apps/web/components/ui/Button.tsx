@@ -19,10 +19,12 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   loading?: boolean;
   href?: string;
+  target?: AnchorHTMLAttributes<HTMLAnchorElement>['target'];
+  rel?: string;
 }
 
 const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonProps>(
-  ({ className, variant = 'primary', loading, children, disabled, href, ...props }, ref) => {
+  ({ className, variant = 'primary', loading, children, disabled, href, target, rel, ...props }, ref) => {
     const classes = cn(
       'inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5',
       'text-sm font-semibold whitespace-nowrap',
@@ -34,7 +36,13 @@ const Button = forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonProps>(
 
     if (href) {
       return (
-        <Link href={href} className={classes} ref={ref as any}>
+        <Link
+          href={href}
+          className={classes}
+          ref={ref as any}
+          target={target}
+          rel={rel ?? (target === '_blank' ? 'noopener noreferrer' : undefined)}
+        >
           {loading && (
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
           )}

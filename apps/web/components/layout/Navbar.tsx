@@ -3,6 +3,28 @@
 import Link from 'next/link';
 import { ConnectButton } from '@mysten/dapp-kit';
 import { Hexagon } from 'lucide-react';
+import { useExchangeRate } from '@/hooks/useExchangeRate';
+
+// Live SUI/USD pill — sourced from the Tatum Data API via /api/rates. Puts a
+// real, ticking data point in the header for the demo.
+function LivePrice() {
+  const { data: rate, isLoading } = useExchangeRate();
+  return (
+    <div
+      className="hidden md:flex items-center gap-2 font-mono text-[0.7rem] rounded-full border border-border-subtle px-3 py-1.5"
+      title="Live SUI/USD via Tatum Data API"
+    >
+      <span className="relative flex h-1.5 w-1.5">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
+        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent" />
+      </span>
+      <span className="text-text-secondary">SUI</span>
+      <span className="text-text-primary font-semibold" suppressHydrationWarning>
+        {isLoading || rate == null ? '—' : `$${rate.toFixed(4)}`}
+      </span>
+    </div>
+  );
+}
 
 export function Navbar() {
   return (
@@ -17,10 +39,11 @@ export function Navbar() {
         </Link>
 
         <div className="flex items-center gap-4">
+          <LivePrice />
           <span className="hidden sm:block font-mono text-[0.65rem] font-bold uppercase tracking-[0.25em] text-text-secondary">
             Sui Testnet
           </span>
-          <ConnectButton 
+          <ConnectButton
             className="!bg-accent !text-black !rounded-full !px-5 !py-2.5 !text-sm !font-bold hover:!bg-[#34d399] !transition-all !shadow-[0_0_12px_var(--color-accent-dim)] hover:!shadow-[0_0_16px_rgba(16,185,129,0.25)] hover:!-translate-y-0.5" 
           />
         </div>

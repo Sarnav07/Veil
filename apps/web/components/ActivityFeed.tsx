@@ -45,6 +45,20 @@ const mockEvents: ActivityEvent[] = [
   { id: '5', type: 'bid', summary: 'Encrypted bid submitted: 250 SUI', actors: ['0x5819...1941'], timestamp: Date.now() - 1400000, txHash: '0x568a...aa92' },
 ];
 
+// Synthetic event generator so the "Live Network" feed visibly streams during the
+// demo. Deterministic ordering (index-driven), so no Math.random at render time.
+const STREAM_TEMPLATES: { type: ActivityEvent['type']; summary: (n: number) => string }[] = [
+  { type: 'bid', summary: (n) => `Encrypted bid submitted: ${300 + (n % 9) * 75} SUI` },
+  { type: 'bid', summary: (n) => `Sealed quote sent to OTC pool: ${1 + (n % 5)}k SUI` },
+  { type: 'launch', summary: () => 'New sealed-bid Token Launch deployed' },
+  { type: 'settlement', summary: () => 'OTC Dark Pool settled — clearing price revealed' },
+];
+
+function fakeAddr(seed: number) {
+  const hex = (seed * 2654435761 % 0xffffffff).toString(16).padStart(8, '0');
+  return `0x${hex.slice(0, 4)}…${hex.slice(4, 8)}`;
+}
+
 export default function ActivityFeed({ filter: initialFilter = 'all', maxItems = 10 }: { filter?: FilterType, maxItems?: number }) {
   const [activeFilter, setActiveFilter] = useState<FilterType>(initialFilter);
   const [events, setEvents] = useState<ActivityEvent[]>(mockEvents);
@@ -52,6 +66,22 @@ export default function ActivityFeed({ filter: initialFilter = 'all', maxItems =
 
   useEffect(() => {
     setMounted(true);
+    let n = 0;
+    const interval = setInterval(() => {
+      n += 1;
+      const tpl = STREAM_TEMPLATES[n % STREAM_TEMPLATES.length]!;
+      const txSeed = (n * 7919) >>> 0;
+      const newEvent: ActivityEvent = {
+        id: `live-${n}-${txSeed}`,
+        type: tpl.type,
+        summary: tpl.summary(n),
+        actors: [fakeAddr(txSeed)],
+        timestamp: Date.now(),
+        txHash: `0x${txSeed.toString(16).padStart(8, '0')}…${(txSeed % 0xffff).toString(16).padStart(4, '0')}`,
+      };
+      setEvents((prev) => [newEvent, ...prev].slice(0, 30));
+    }, 4500);
+    return () => clearInterval(interval);
   }, []);
 
   const filtered = events
@@ -112,7 +142,7 @@ export default function ActivityFeed({ filter: initialFilter = 'all', maxItems =
           filtered.map((event) => (
             <div
               key={event.id}
-              className="py-4 px-4 flex items-start gap-3 transition-colors"
+              className="feed-in py-4 px-4 flex items-start gap-3 transition-colors"
               style={{ background: 'transparent' }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'rgba(45,201,100,0.04)';

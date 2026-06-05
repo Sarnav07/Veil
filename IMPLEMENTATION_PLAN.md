@@ -54,10 +54,11 @@ This document breaks Veil Protocol into **fine-grained, independently buildable 
 
 ### Protocol Flow
 - **Sellers** deploy an auction/OTC request, defining the deposit, asset, and closing time.
-- **Buyers** submit an encrypted bid (using Seal encryption).
+- **Buyers** submit an encrypted bid (using Seal time-lock encryption).
 - The raw encrypted bid is stored immutably on **Walrus Decentralized Storage**.
-- Only the cryptographic commitment (SHA-256 hash) and the Walrus Blob ID are submitted to **Sui Mainnet**, preserving absolute privacy and MEV resistance.
-- **Tatum APIs** provide real-time fiat exchange rates for seamless UX.
+- Only the cryptographic commitment (SHA-256 hash) and the Walrus Blob ID are submitted to **Sui (testnet)**, preserving absolute privacy and MEV resistance.
+- All on-chain reads and transaction execution flow through the **Tatum Sui RPC gateway** (server-side proxy at `/api/rpc`), and the **Tatum Data API** (`/api/rates`) provides real-time SUI/USD for the UI.
+- After close, a keeper decrypts every bid via Seal, the contract re-hashes each commitment to prove integrity, funds settle on-chain, and the settlement record is archived back to Walrus.
 
 ---
 
@@ -70,9 +71,10 @@ This document breaks Veil Protocol into **fine-grained, independently buildable 
 | Smart Contracts | Sui Move |
 | Chain | Sui Testnet / Mainnet |
 | Storage | Walrus Network |
-| Data | Tatum RPC & Data APIs |
-| Frontend | Next.js 14, TailwindCSS, Framer Motion |
-| Blockchain Interaction | @mysten/dapp-kit, @mysten/sui.js |
+| Encryption | Mysten Seal (`@mysten/seal`) |
+| Data & RPC | Tatum Sui RPC gateway + Data API |
+| Frontend | Next.js 14, TailwindCSS, GSAP |
+| Blockchain Interaction | @mysten/dapp-kit, @mysten/sui |
 
 ---
 
@@ -145,7 +147,24 @@ and PUTs it to a configured Walrus publisher endpoint. It must return the newly 
 Create a Next.js App Router API endpoint at `/api/rates`.
 Use fetch to hit the Tatum API: `https://api.tatum.io/v3/tatum/rate/SUI?basePair=USD`.
 Include the `x-api-key` header from the environment variables.
-Return the parsed rate as a JSON response.
+Validate the response and return the parsed rate as JSON. If the key is missing or Tatum is
+unreachable, return the last-known rate flagged `stale: true` instead of an error.
+```
+
+### M-08b: Tatum Sui RPC Proxy
+**Files:** `apps/web/app/api/rpc/route.ts`, `apps/web/app/providers.tsx`
+
+**Description:** Server-side JSON-RPC proxy that forwards every Sui request to the Tatum Sui
+gateway with the `TATUM_API_KEY` attached, so 100% of the dApp's on-chain reads and
+transaction execution run through Tatum while the key never reaches the browser. The dapp-kit
+`SuiClientProvider` points at this same-origin `/api/rpc` route.
+
+**Coding Agent Prompt:**
+```
+Create a Next.js App Router POST endpoint at `/api/rpc` that forwards the request body to the
+Tatum Sui gateway (TATUM_SUI_RPC_URL) with an `x-api-key` header from the environment, and
+returns the upstream JSON verbatim. Fall back to a public fullnode if no key is set. Then set
+the dapp-kit network url to `/api/rpc` so all browser Sui traffic flows through Tatum.
 ```
 
 ---
