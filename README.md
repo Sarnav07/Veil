@@ -3,7 +3,9 @@
 **Confidential, front-run-resistant trading on Sui.** Sealed-bid auctions, fair token
 launches, and an OTC dark pool — where every bid stays encrypted until the moment it settles.
 
-Built for the **Tatum × Walrus Hackathon 2026** · Sui Testnet
+![Veil Protocol — any asset, any size, fully on-chain](apps/web/public/screenshots/hero.png)
+
+**▶ Live demo: [veil-web-eight.vercel.app](https://veil-web-eight.vercel.app)** · Built for the **Tatum × Walrus Hackathon 2026** · Sui Testnet
 
 ---
 
@@ -46,6 +48,17 @@ prices the result in USD.
          archive record ──▶ Walrus ──▶ add_archive(blobId) on-chain
          mark-to-market ──▶ Tatum Data API (SUI/USD)
 ```
+
+## Screenshots
+
+| | |
+|:--:|:--:|
+| ![Live Network explorer](apps/web/public/screenshots/dashboard.png) | ![Submit a sealed bid](apps/web/public/screenshots/submit-bid.png) |
+| **Live Network explorer** — active auctions, TVL and a live event feed, priced in USD live from the **Tatum Data API**. | **Submit a sealed bid** — encrypted client-side with **Seal**, stored on **Walrus**; only the SHA-256 commitment touches the chain. |
+
+| ![Create a sealed auction](apps/web/public/screenshots/create-auction.png) |
+|:--:|
+| **Create** a sealed token launch or an OTC dark pool — pick the asset, supply, deposit and close time, then deploy on-chain via the Tatum Sui RPC gateway. |
 
 ## The Three Primitives
 

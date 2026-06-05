@@ -35,9 +35,26 @@ const alphaSlabOne = Alfa_Slab_One({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://veil-web-eight.vercel.app'),
   title: 'VEIL — Confidential Sealed-Bid Trading',
   description:
     'Bids no one can see, size, or trace — until the auction closes. Sealed-bid auctions and OTC dark pools on Sui.',
+  openGraph: {
+    title: 'VEIL — Confidential Sealed-Bid Trading',
+    description:
+      'Bids no one can see, size, or trace — until the auction closes. Sealed-bid auctions and OTC dark pools on Sui.',
+    url: 'https://veil-web-eight.vercel.app',
+    siteName: 'Veil Protocol',
+    images: [{ url: '/screenshots/dashboard.png', width: 1024, height: 578, alt: 'Veil Protocol — Live Network explorer' }],
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'VEIL — Confidential Sealed-Bid Trading',
+    description:
+      'Bids no one can see, size, or trace — until the auction closes. Sealed-bid auctions and OTC dark pools on Sui.',
+    images: ['/screenshots/dashboard.png'],
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
