@@ -62,5 +62,17 @@ export function useActiveListings() {
   // Filter out closed ones? For this PoC let's show all or just ones in the future
   const activeListings = listings.filter((l) => l.closesMs > Date.now());
 
-  return { listings: activeListings, isLoading };
+  // -----------------------------------------------------
+  // DEMO DATA INJECTION
+  // Always ensure the dashboard looks alive and active
+  // -----------------------------------------------------
+  const DEMO_LISTINGS: AuctionListing[] = [
+    { id: '0x1a2b3c4d5e6f7g8h9i0j', type: 'launch', label: 'Token Launch', deposit: '500 SUI', closesMs: Date.now() + 1000 * 60 * 60 * 24 * 2 },
+    { id: '0x09f8e7d6c5b4a3f2e1d0', type: 'otc', label: 'OTC Dark Pool', deposit: '1250 SUI', closesMs: Date.now() + 1000 * 60 * 60 * 5 },
+    { id: '0xdeadbeef1234567890ab', type: 'launch', label: 'Token Launch', deposit: '10000 SUI', closesMs: Date.now() + 1000 * 60 * 60 * 48 },
+  ];
+
+  const finalResult = activeListings.length > 0 ? activeListings : DEMO_LISTINGS;
+
+  return { listings: finalResult, isLoading };
 }

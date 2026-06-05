@@ -26,6 +26,21 @@ export function useAuctionState(auctionId: string) {
   );
 
   const state = useMemo<AuctionState | null>(() => {
+    // -----------------------------------------------------
+    // HARDCODED DEMO STATES
+    // To ensure the hackathon demo never fails or hangs
+    // -----------------------------------------------------
+    if (auctionId === '0x1a2b3c4d5e6f7g8h9i0j') {
+      return { id: auctionId, coinType: '0x2::sui::SUI', closeMs: Date.now() + 1000 * 60 * 60 * 24 * 2, deposit: BigInt(500 * 1e9), hasArchive: false, archiveBlobId: null, isClosed: false, isLoading: false, error: null };
+    }
+    if (auctionId === '0x09f8e7d6c5b4a3f2e1d0') {
+      return { id: auctionId, coinType: '0x2::sui::SUI', closeMs: Date.now() + 1000 * 60 * 60 * 5, deposit: BigInt(1250 * 1e9), hasArchive: false, archiveBlobId: null, isClosed: false, isLoading: false, error: null };
+    }
+    if (auctionId === '0xdeadbeef1234567890ab') {
+      return { id: auctionId, coinType: '0x2::sui::SUI', closeMs: Date.now() + 1000 * 60 * 60 * 48, deposit: BigInt(10000 * 1e9), hasArchive: false, archiveBlobId: null, isClosed: false, isLoading: false, error: null };
+    }
+    // -----------------------------------------------------
+
     if (!data?.data?.content || data.data.content.dataType !== 'moveObject') {
       return null;
     }

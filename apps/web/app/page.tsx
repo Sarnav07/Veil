@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
 import { useActiveListings } from '@/hooks/useActiveListings';
 import { Wallet, Database } from 'lucide-react';
+import ActivityFeed from '@/components/ActivityFeed';
 import dynamic from 'next/dynamic';
 
 const GridScan = dynamic<any>(
@@ -37,12 +38,7 @@ export default function Dashboard() {
 
   const balance = coins?.data.reduce((acc, coin) => acc + BigInt(coin.balance), 0n) || 0n;
 
-  const DEMO_LISTINGS = [
-    { id: '0x1a2b3c4d5e6f7g8h9i0j', type: 'launch', deposit: '500 SUI', closesMs: Date.now() + 1000 * 60 * 60 * 24 * 2 },
-    { id: '0x09f8e7d6c5b4a3f2e1d0', type: 'otc', deposit: '1250 SUI', closesMs: Date.now() + 1000 * 60 * 60 * 5 },
-    { id: '0xdeadbeef1234567890ab', type: 'launch', deposit: '10000 SUI', closesMs: Date.now() + 1000 * 60 * 60 * 48 },
-  ];
-  const displayListings = listings.length > 0 ? listings : DEMO_LISTINGS as any[];
+  const displayListings = listings;
 
   return (
     <div className="min-h-screen bg-[#000000]">
@@ -264,6 +260,10 @@ export default function Dashboard() {
               );
             })}
           </div>
+          <div className="mt-16">
+            <ActivityFeed />
+          </div>
+
         </div>
 
         {/* CTA BANNER */}

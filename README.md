@@ -1,60 +1,99 @@
-# VEIL
+# Veil Protocol 🛡️
 
-> Confidential sealed-bid trading on Sui. Bids no one can see, size, or trace — until the auction closes.
+A decentralized, sealed-bid auction network and OTC Dark Pool. Built entirely onchain.  
+**Tatum x Walrus Hackathon**
 
-VEIL is a sealed-bid auction **primitive** built on Sui Move, with bids encrypted via
-**[Seal](https://seal.mystenlabs.com/)** (threshold IBE + time-lock), stored on
-**[Walrus](https://www.walrus.xyz/)**, and reached through **[Tatum](https://tatum.io/)** Sui RPC/Data
-APIs. Two apps ride on the same engine:
+---
 
-- **VEIL-Launch** — anti-snipe fair token launches.
-- **VEIL-OTC** — a private dark pool for large trades.
+## What Is Veil Protocol?
 
-Built for the **Tatum x Walrus** hackathon (track: *DeFi + Data*).
+Veil Protocol solves the critical issues of MEV, front-running, and price manipulation in DeFi. It allows anyone to launch a token or an OTC Dark Pool where bids are completely sealed and encrypted.
 
-## Why it is private
+Sellers define the asset, minimum deposit, and closing time. Buyers submit cryptographically sealed bids. The market decides the fairest price, completely anonymously, until the auction closes and settles fully onchain.
 
-Each bid is encrypted to an identity derived from `auctionId ‖ closeTime` and stored as a Walrus blob;
-only the `blobId` and a commitment ever touch the chain. Seal's time-lock releases decryption keys
-**at close**, so until then the bid satisfies the strong-hiding triple from
-[IACR 2025/2127](https://eprint.iacr.org/2025/2127): value, existence, and identity are all hidden.
-The construction follows the batched threshold-IBE line — Agarwal–Fernando–Pinkas, *Efficiently-
-Thresholdizable Batched IBE* ([CRYPTO 2025](https://eprint.iacr.org/2024/1575)) — which Seal realizes.
+## Architecture
 
-## Repository layout
-
-```text
-move/veil/        Sui Move package (auction primitive, Seal policy, settlement)
-packages/sdk/     TypeScript SDK for Seal + Walrus + Tatum integrations and TX building
-scripts/          Keeper orchestrator + spikes
-apps/web/         Next.js frontend (@mysten/dapp-kit) [WIP]
-docs/             DEMO.md (visual scope + storyboard)
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        FRONTEND EXPLORER                        │
+│   Launch Auction · Submit Encrypted Bid · Live Network Feed     │
+└──────────────────────────────┬──────────────────────────────────┘
+                               │ REST / RPC
+┌──────────────────────────────▼──────────────────────────────────┐
+│                      VEIL PROTOCOL SDK                          │
+│     Encryption · Hashing · Walrus Publishing · Sui Client       │
+└───┬──────────────┬───────────────┬──────────────┬───────────────┘
+    │              │               │              │
+┌───▼───┐    ┌─────▼─────┐   ┌────▼────┐   ┌────▼────┐
+│Seal   │    │  Walrus   │   │  Tatum  │   │  Sui    │
+│Crypto │    │  Storage  │   │  Data   │   │  Network│
+│Engine │    │  Layer    │   │  APIs   │   │  Layer  │
+└───┬───┘    └─────┬─────┘   └────┬────┘   └─────────┘
+    │              │               │
+    │    ┌─────────▼───────────┐   │
+    │    │ SUI SMART CONTRACTS │   │
+    │    │ veil_launch         │   │
+    │    │ veil_otc            │   │
+    │    └──┬──────┬───────┬───┘   │
+    │       │      │       │       │
+┌───▼───┐ ┌▼──────▼┐ ┌────▼───┐ ┌─▼──────────┐
+│Token  │ │  Sui   │ │Walrus  │ │  Seal      │
+│Deposit│ │  Coin  │ │Blob ID │ │  SHA-256   │
+└───────┘ └────────┘ └────────┘ └────────────┘
 ```
 
-## Current Status
+## Sponsor Integrations
 
-- **On-chain Contracts**: 100% complete, fully unit-tested (31/31), and deployed to Sui Testnet.
-- **Off-chain SDK**: 100% complete. Handles creating transactions, encrypting bids via Seal, and fetching fiat data from Tatum.
-- **Keeper Orchestrator**: 100% complete. A fully automated backend loop that pulls encrypted blobs from Walrus, evaluates the Seal release policy on-chain, and settles the trade. *Note on Security: The Keeper serves a trusted-liveness (not trusted-integrity) role. Because settlement re-hashes commitments before any funds move, the Keeper cannot forge or inflate reveal values.*
-- **Frontend App**: **Work in Progress.**
+| Sponsor | Integration | What It Does |
+|---------|-------------|--------------|
+| **Sui** | Network Layer | Fast, cheap programmable transaction blocks and state management. |
+| **Walrus** | Storage Layer | Decentralized storage of encrypted bids. Removes the need to store large ciphertexts onchain. |
+| **Tatum** | Data APIs & RPC | Fetches real-time USD exchange rates for Sui to power the frontend Fiat conversions. |
 
-## Quickstart
+## Getting Started
 
-Prerequisites: Node ≥ 20, pnpm 9, the [Sui CLI](https://docs.sui.io/guides/developer/getting-started/sui-install),
-and a free [Tatum API key](https://dashboard.tatum.io). *(Toolchain verified on `sui 1.73.0`, `node v20.x`, `pnpm 9.x`)*.
+### Prerequisites
+- Node.js 20+
+- pnpm 9+
+- Git
+- Sui Wallet Extension (Testnet)
+
+### Setup
 
 ```bash
+git clone https://github.com/Sarnav07/Veil.git
+cd Veil
 pnpm install
-cp .env.example .env          # then fill in TATUM_API_KEY and SUI_PRIVATE_KEY
-
-pnpm typecheck                # verifies everything is typed correctly
-pnpm lint                     # lints all packages
-sui move test --path move/veil # 31/31 tests pass with the toolchain-matched framework (no pinned Sui dep)
-pnpm --filter @veil/web dev   # run the frontend WIP
 ```
 
-See [`docs/DEMO.md`](./docs/DEMO.md) for the demo storyboard.
+### Run the App
+
+```bash
+# Start the Next.js development server
+pnpm --filter @veil/web dev
+```
+
+Open your browser and navigate to `http://localhost:3000`.
+
+## Project Structure
+
+See [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md) for the full module breakdown and coding agent guidelines.
+
+## Tech Stack
+
+- **Language:** TypeScript (Node.js 20+)
+- **Monorepo:** pnpm workspaces
+- **Contracts:** Sui Move
+- **Chain:** Sui Testnet
+- **Storage:** Walrus Network
+- **Frontend:** Next.js 14, TailwindCSS, Framer Motion
+- **Blockchain SDKs:** `@mysten/dapp-kit`, `@mysten/sui.js`
+
+## Team
+- **Sarnav07** — Full Stack / Smart Contracts
+
+Built for the **Tatum x Walrus Hackathon 2026**.
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+MIT
