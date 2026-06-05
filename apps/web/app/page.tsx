@@ -122,7 +122,7 @@ export default function Dashboard() {
               onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
               onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.75')}
             >
-              <img src="https://cdn.prod.website-files.com/62624e283b503f0ce727563e/683063c94692de3e7ea7f128_sui%20logo.svg" alt="Sui logo" style={{ height: 50, width: 'auto', objectFit: 'contain' }} />
+              <img src="/logos/sui-new.png" alt="Sui logo" style={{ height: 46, width: 'auto', objectFit: 'contain', borderRadius: 8 }} />
               <span className="font-bold tracking-tight text-white" style={{ fontSize: '32px' }}>Sui</span>
             </div>
 
@@ -131,7 +131,7 @@ export default function Dashboard() {
               onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
               onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.75')}
             >
-              <img src="https://cdn.prod.website-files.com/62624e283b503f3e68275638/6a02c8bf76367e0e8388d43d_GPT_image-2026-05-12-13-28-25-removebg-preview.png" alt="Walrus logo" style={{ height: 65, width: 'auto', objectFit: 'contain' }} />
+              <img src="/logos/walrus-new.png" alt="Walrus logo" style={{ height: 46, width: 'auto', objectFit: 'contain', borderRadius: 8 }} />
               <span className="font-bold tracking-tight text-white" style={{ fontSize: '32px' }}>Walrus</span>
             </div>
 
@@ -140,8 +140,8 @@ export default function Dashboard() {
               onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
               onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.75')}
             >
-              <div style={{ height: 50, width: 50 }} className="relative flex items-center justify-center rounded-full border border-white/20">
-                <img src="https://cdn.prod.website-files.com/62624e283b503f3e68275638/62624e283b503fe79427571d_logog_white.svg" alt="Tatum logo" style={{ height: 26, width: 'auto', objectFit: 'contain' }} />
+              <div style={{ height: 46, width: 46 }} className="relative flex items-center justify-center overflow-hidden">
+                <img src="/logos/tatum-new.png" alt="Tatum logo" style={{ height: '100%', width: '100%', objectFit: 'contain' }} />
               </div>
               <span className="font-bold tracking-tight text-white" style={{ fontSize: '32px' }}>Tatum</span>
             </div>
@@ -201,12 +201,21 @@ export default function Dashboard() {
             </div>
 
             {/* Right — Graphic */}
-            <div className="relative hidden lg:block min-h-[500px]">
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-[300px] h-[400px] glass border-accent/20 flex flex-col items-center justify-center text-center p-8 transform rotate-3 hover:rotate-0 transition-all duration-500 shadow-[0_0_50px_rgba(58,232,109,0.1)]">
-                   <Database className="w-16 h-16 text-accent mb-6 opacity-80" />
-                   <h3 className="text-xl font-bold mb-2">Immutable Vault</h3>
-                   <p className="text-sm text-text-secondary">Bids remain locked until closing time.</p>
+            <div className="relative hidden lg:block min-h-[500px] w-full">
+              <div className="absolute inset-0">
+                {/* Back / Top Layer: Dashboard */}
+                <div className="absolute top-[0%] right-[-5%] w-[550px] rounded-xl overflow-hidden border border-white/5 shadow-[0_0_40px_rgba(58,232,109,0.05)] transform rotate-[2deg] hover:rotate-0 hover:z-40 transition-all duration-500 hover:scale-105 opacity-50 hover:opacity-100 z-10 origin-center">
+                  <img src="/screenshots/dashboard.png" alt="Veil Dashboard" className="w-full h-auto" />
+                </div>
+                
+                {/* Middle Layer: Activity Feed */}
+                <div className="absolute top-[35%] right-[-15%] w-[360px] rounded-xl overflow-hidden border border-white/10 shadow-[0_0_50px_rgba(58,232,109,0.1)] transform rotate-[-4deg] hover:rotate-0 hover:z-40 transition-all duration-500 hover:scale-105 opacity-80 hover:opacity-100 z-20 origin-center bg-background">
+                  <img src="/screenshots/activity-feed.png" alt="Veil Activity Feed" className="w-full h-auto" />
+                </div>
+
+                {/* Front Layer: Submit Bid */}
+                <div className="absolute top-[50%] right-[20%] w-[420px] rounded-xl overflow-hidden border border-accent/20 shadow-[0_0_60px_rgba(58,232,109,0.15)] transform rotate-[1deg] hover:rotate-0 hover:z-40 transition-all duration-500 hover:scale-105 z-30 origin-center bg-background">
+                  <img src="/screenshots/submit-bid.png" alt="Veil Submit Bid" className="w-full h-auto" />
                 </div>
               </div>
             </div>

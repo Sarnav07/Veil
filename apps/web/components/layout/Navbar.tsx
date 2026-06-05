@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { ConnectButton } from '@mysten/dapp-kit';
-import { Hexagon } from 'lucide-react';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
 
 // Live SUI/USD pill — sourced from the Tatum Data API via /api/rates. Puts a
@@ -31,7 +30,7 @@ export function Navbar() {
     <header className="sticky top-0 z-50 border-b border-transparent bg-transparent">
       <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
         <Link href="/" className="flex items-center gap-2 no-underline group">
-          <Hexagon className="h-[26px] w-[26px] text-accent group-hover:text-accent-hover transition-colors" strokeWidth={1.5} />
+          <img src="/logos/veil-new.png" alt="Veil Protocol" className="h-[28px] w-[28px] object-contain group-hover:opacity-80 transition-opacity" />
           <div className="flex items-center gap-1.5 text-2xl leading-none pt-0.5">
             <span className="text-text-primary" style={{ fontFamily: 'var(--font-logo)' }}>VEIL</span>
             <span className="text-accent" style={{ fontFamily: 'var(--font-logo)' }}>PROTOCOL</span>
