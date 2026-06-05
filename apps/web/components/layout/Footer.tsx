@@ -1,10 +1,9 @@
 'use client';
 
-import dynamic from 'next/dynamic';
+
 import Link from 'next/link';
 import { Hexagon } from 'lucide-react';
 
-const Shuffle = dynamic<any>(() => import('@/components/Shuffle').then(m => m.default), { ssr: false });
 
 export function Footer() {
   return (
@@ -35,43 +34,17 @@ export function Footer() {
           className="leading-none whitespace-nowrap flex items-baseline"
           style={{ fontFamily: 'var(--font-logo)', fontSize: 'clamp(32px, 8vw, 130px)' }}
         >
-          <Shuffle
-            text="VEIL"
-            tag="span"
-            textAlign="left"
-            style={{ color: 'var(--text)', fontSize: 'inherit', lineHeight: 'inherit', fontFamily: 'inherit' }}
-            shuffleDirection="right"
-            duration={0.35}
-            animationMode="evenodd"
-            shuffleTimes={1}
-            ease="power3.out"
-            stagger={0.03}
-            threshold={0.1}
-            triggerOnce={true}
-            triggerOnHover={true}
-            respectReducedMotion={true}
-            loop={false}
-            loopDelay={0}
-          />
-          <Shuffle
-            text="PROTOCOL"
-            tag="span"
-            textAlign="left"
+          <span
+            style={{ color: 'var(--text-primary)', fontSize: 'inherit', lineHeight: 'inherit', fontFamily: 'inherit' }}
+          >
+            VEIL
+          </span>
+          <span
             className="ml-2"
             style={{ color: '#3ae86d', fontSize: 'inherit', lineHeight: 'inherit', fontFamily: 'inherit' }}
-            shuffleDirection="right"
-            duration={0.35}
-            animationMode="evenodd"
-            shuffleTimes={1}
-            ease="power3.out"
-            stagger={0.03}
-            threshold={0.1}
-            triggerOnce={true}
-            triggerOnHover={true}
-            respectReducedMotion={true}
-            loop={false}
-            loopDelay={0}
-          />
+          >
+            PROTOCOL
+          </span>
         </h2>
       </div>
 
