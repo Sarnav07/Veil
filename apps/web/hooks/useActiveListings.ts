@@ -7,7 +7,6 @@ export interface AuctionListing {
   label: string;
   deposit: string;
   closesMs: number;
-  bids: number; // For simplicity in this PoC, we might not count bids exactly without fetching the object, but we'll try or mock it.
 }
 
 export function useActiveListings() {
@@ -40,7 +39,6 @@ export function useActiveListings() {
         label: 'Token Launch',
         deposit: (Number(p.deposit) / 1e9).toString() + ' SUI',
         closesMs: Number(p.close_ms),
-        bids: 0, // Would require fetching the actual object to see bids.length
       });
     }
   }
@@ -54,7 +52,6 @@ export function useActiveListings() {
         label: 'OTC Dark Pool',
         deposit: (Number(p.deposit) / 1e9).toString() + ' SUI',
         closesMs: Number(p.close_ms),
-        bids: 0,
       });
     }
   }

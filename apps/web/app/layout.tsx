@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { Inter, JetBrains_Mono, Playfair_Display } from 'next/font/google';
+import { Inter, JetBrains_Mono, Instrument_Serif, Alfa_Slab_One } from 'next/font/google';
 
 import './globals.css';
 import { Providers } from './providers';
@@ -19,10 +19,19 @@ const mono = JetBrains_Mono({
   variable: '--font-mono',
 });
 
-const playfair = Playfair_Display({
+const playfair = Instrument_Serif({
+  weight: ['400'],
+  style: ['normal', 'italic'],
   subsets: ['latin'],
   display: 'swap',
   variable: '--font-serif',
+});
+
+const alphaSlabOne = Alfa_Slab_One({
+  subsets: ['latin'],
+  weight: ['400'],
+  variable: '--font-logo',
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -33,7 +42,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={`${inter.variable} ${mono.variable} ${playfair.variable}`}>
+    <html lang="en" className={`${inter.variable} ${mono.variable} ${playfair.variable} ${alphaSlabOne.variable}`}>
       <body className="flex min-h-screen flex-col font-sans antialiased">
         <Providers>
           <Navbar />

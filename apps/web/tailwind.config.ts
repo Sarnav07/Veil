@@ -13,10 +13,10 @@ const config: Config = {
         'surface-hover': '#1A1A1A',
         'text-primary': '#F3F4F6',
         'text-secondary': '#9CA3AF',
-        accent: '#10b981', // AgentNet green
-        'accent-dim': 'rgba(16, 185, 129, 0.15)',
+        accent: '#3ae86d', // Brighter green for AgentNet look
+        'accent-dim': 'rgba(58, 232, 109, 0.15)',
         'border-subtle': 'rgba(255, 255, 255, 0.08)',
-        success: '#10B981',
+        success: '#3ae86d',
         error: '#EF4444',
       },
       fontFamily: {

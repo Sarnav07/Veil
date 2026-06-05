@@ -9,11 +9,15 @@ export function useDeployAuction() {
 
   const deployLaunch = async (
     coinType: string,
-    supplyCoin: string,
+    supplyAmount: bigint, // Changed from supplyCoin: string
     deposit: bigint,
     closeMs: bigint
   ) => {
     const tx = new Transaction();
+    
+    // Split the supply amount from gas since we assume coinType is SUI for now
+    const [supplyCoin] = tx.splitCoins(tx.gas, [tx.pure.u64(supplyAmount)]);
+
     LaunchTxBuilder.create(tx, config.packageId, {
       supplyCoin,
       closeMs,
@@ -25,7 +29,7 @@ export function useDeployAuction() {
 
   const deployOtc = async (
     coinType: string,
-    assetCoin: string,
+    assetAmount: bigint, // Changed from assetCoin: string
     deposit: bigint,
     closeMs: bigint,
     reservePrice: bigint
@@ -46,13 +50,13 @@ export function useDeployAuction() {
 
     const ciphertext = await sealVault.sealBid(payload, closeMs);
     const blobIdStr = await walrus.store(ciphertext, 1);
-    
-    // Walrus blobId is base64 url-safe encoded string. Wait, we need it as a byte array?
-    // Let's assume we can just pass the string if the SDK takes string, or parse it.
-    // The SDK expects Uint8Array for reserveBlobId. We decode it or just encode the string.
     const reserveBlobId = new TextEncoder().encode(blobIdStr);
 
     const tx = new Transaction();
+    
+    // Split the asset amount from gas
+    const [assetCoin] = tx.splitCoins(tx.gas, [tx.pure.u64(assetAmount)]);
+
     OtcTxBuilder.create(tx, config.packageId, {
       assetCoin,
       reserveCommitment: commitment,

@@ -43,7 +43,7 @@
     backdrop-filter: blur(12px);
   }
 
-  /* 3D Animated Grid Background */
+  /* 3D Animated Grid Tunnel Background */
   .animated-grid-bg {
     position: fixed;
     top: 0;
@@ -52,45 +52,51 @@
     height: 100vh;
     z-index: -1;
     overflow: hidden;
-    background-color: #000;
-    perspective: 1000px;
+    background-color: #050505;
+    perspective: 800px;
   }
 
   .animated-grid-bg::after {
     content: '';
     position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    /* Fade out the edges of the grid using a radial gradient mask */
-    background: radial-gradient(circle at center, transparent 0%, #000 80%);
-    z-index: 1;
+    inset: 0;
+    background: radial-gradient(circle at center, transparent 0%, #050505 85%);
+    z-index: 10;
     pointer-events: none;
   }
 
-  .animated-grid {
+  .tunnel-scene {
     position: absolute;
-    width: 200vw;
-    height: 200vh;
-    top: -50vh;
-    left: -50vw;
-    /* Grid lines */
-    background-image: 
-      linear-gradient(to right, rgba(16, 185, 129, 0.2) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(16, 185, 129, 0.2) 1px, transparent 1px);
-    background-size: 80px 80px;
-    transform: rotateX(60deg) translateZ(-200px);
-    transform-origin: center center;
-    animation: grid-move 20s linear infinite;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transform: translate(-50%, -50%);
   }
 
-  @keyframes grid-move {
-    0% {
-      transform: rotateX(60deg) translateZ(-200px) translateY(0);
-    }
-    100% {
-      transform: rotateX(60deg) translateZ(-200px) translateY(80px); /* Move one grid cell down */
-    }
+  .tunnel-plane {
+    position: absolute;
+    width: 400vw;
+    height: 400vh;
+    left: -150vw;
+    top: -150vh;
+    /* Chromatic aberration grid lines: red left, green center, blue right */
+    background-image: 
+      linear-gradient(to right, rgba(255,0,0,0.4) 1px, rgba(58,232,109,0.3) 2px, rgba(0,0,255,0.4) 3px, transparent 3px),
+      linear-gradient(to bottom, rgba(255,0,0,0.4) 1px, rgba(58,232,109,0.3) 2px, rgba(0,0,255,0.4) 3px, transparent 3px);
+    background-size: 140px 140px;
+    transform-origin: center center;
+    animation: tunnel-move 12s linear infinite;
+  }
+
+  .tunnel-bottom { transform: rotateX(90deg) translateZ(350px); }
+  .tunnel-top { transform: rotateX(-90deg) translateZ(350px); }
+  .tunnel-left { transform: rotateY(90deg) translateZ(350px); }
+  .tunnel-right { transform: rotateY(-90deg) translateZ(350px); }
+
+  @keyframes tunnel-move {
+    0% { background-position: 0 0, 0 0; }
+    100% { background-position: 0 140px, 0 140px; }
   }
 }

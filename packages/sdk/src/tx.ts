@@ -4,13 +4,13 @@ export const LaunchTxBuilder = {
   create(
     tx: Transaction,
     packageId: string,
-    args: { supplyCoin: string; closeMs: bigint; deposit: bigint; coinType: string; clock?: string },
+    args: { supplyCoin: string | any; closeMs: bigint; deposit: bigint; coinType: string; clock?: string },
   ) {
     tx.moveCall({
       target: `${packageId}::veil_launch::create`,
       typeArguments: [args.coinType],
       arguments: [
-        tx.object(args.supplyCoin),
+        typeof args.supplyCoin === 'string' ? tx.object(args.supplyCoin) : args.supplyCoin,
         tx.pure.u64(args.closeMs),
         tx.pure.u64(args.deposit),
         tx.object(args.clock ?? '0x6'),
@@ -21,14 +21,14 @@ export const LaunchTxBuilder = {
   submitBid(
     tx: Transaction,
     packageId: string,
-    args: { sale: string; depositCoin: string; blobId: Uint8Array; commitment: Uint8Array; coinType: string; clock?: string },
+    args: { sale: string; depositCoin: string | any; blobId: Uint8Array; commitment: Uint8Array; coinType: string; clock?: string },
   ) {
     tx.moveCall({
       target: `${packageId}::veil_launch::submit_bid`,
       typeArguments: [args.coinType],
       arguments: [
         tx.object(args.sale),
-        tx.object(args.depositCoin),
+        typeof args.depositCoin === 'string' ? tx.object(args.depositCoin) : args.depositCoin,
         tx.pure.vector('u8', Array.from(args.blobId)),
         tx.pure.vector('u8', Array.from(args.commitment)),
         tx.object(args.clock ?? '0x6'),
@@ -71,7 +71,6 @@ export const LaunchTxBuilder = {
           args.nonces.map((n) => Array.from(n)),
         ),
       ],
-
     });
   },
 
@@ -95,13 +94,13 @@ export const OtcTxBuilder = {
   create(
     tx: Transaction,
     packageId: string,
-    args: { assetCoin: string; reserveCommitment: Uint8Array; reserveBlobId: Uint8Array; closeMs: bigint; deposit: bigint; coinType: string; clock?: string },
+    args: { assetCoin: string | any; reserveCommitment: Uint8Array; reserveBlobId: Uint8Array; closeMs: bigint; deposit: bigint; coinType: string; clock?: string },
   ) {
     tx.moveCall({
       target: `${packageId}::veil_otc::create`,
       typeArguments: [args.coinType],
       arguments: [
-        tx.object(args.assetCoin),
+        typeof args.assetCoin === 'string' ? tx.object(args.assetCoin) : args.assetCoin,
         tx.pure.vector('u8', Array.from(args.reserveCommitment)),
         tx.pure.vector('u8', Array.from(args.reserveBlobId)),
         tx.pure.u64(args.closeMs),
@@ -114,14 +113,14 @@ export const OtcTxBuilder = {
   submitQuote(
     tx: Transaction,
     packageId: string,
-    args: { rfq: string; depositCoin: string; blobId: Uint8Array; commitment: Uint8Array; coinType: string; clock?: string },
+    args: { rfq: string; depositCoin: string | any; blobId: Uint8Array; commitment: Uint8Array; coinType: string; clock?: string },
   ) {
     tx.moveCall({
       target: `${packageId}::veil_otc::submit_quote`,
       typeArguments: [args.coinType],
       arguments: [
         tx.object(args.rfq),
-        tx.object(args.depositCoin),
+        typeof args.depositCoin === 'string' ? tx.object(args.depositCoin) : args.depositCoin,
         tx.pure.vector('u8', Array.from(args.blobId)),
         tx.pure.vector('u8', Array.from(args.commitment)),
         tx.object(args.clock ?? '0x6'),
@@ -162,7 +161,6 @@ export const OtcTxBuilder = {
         tx.pure.u64(args.reserve),
         tx.pure.vector('u8', Array.from(args.reserveNonce)),
       ],
-
     });
   },
 

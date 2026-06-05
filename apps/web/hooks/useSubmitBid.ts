@@ -10,7 +10,7 @@ export function useSubmitBid() {
   const submitLaunchBid = async (
     coinType: string,
     saleId: string,
-    depositCoin: string,
+    depositAmount: bigint, // Changed from depositCoin: string
     price: bigint,
     qty: bigint,
     closeMs: bigint
@@ -34,6 +34,10 @@ export function useSubmitBid() {
     const blobId = new TextEncoder().encode(blobIdStr);
 
     const tx = new Transaction();
+    
+    // Split the deposit amount from gas
+    const [depositCoin] = tx.splitCoins(tx.gas, [tx.pure.u64(depositAmount)]);
+
     LaunchTxBuilder.submitBid(tx, config.packageId, {
       sale: saleId,
       depositCoin,
@@ -47,7 +51,7 @@ export function useSubmitBid() {
   const submitOtcQuote = async (
     coinType: string,
     rfqId: string,
-    depositCoin: string,
+    depositAmount: bigint, // Changed from depositCoin: string
     price: bigint,
     closeMs: bigint
   ) => {
@@ -70,6 +74,10 @@ export function useSubmitBid() {
     const blobId = new TextEncoder().encode(blobIdStr);
 
     const tx = new Transaction();
+    
+    // Split the deposit amount from gas
+    const [depositCoin] = tx.splitCoins(tx.gas, [tx.pure.u64(depositAmount)]);
+
     OtcTxBuilder.submitQuote(tx, config.packageId, {
       rfq: rfqId,
       depositCoin,

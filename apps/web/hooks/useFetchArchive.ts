@@ -46,7 +46,6 @@ export function useFetchArchive(auctionId: string, type: 'launch' | 'otc') {
         const bytes = await walrus.read(blobIdStr);
         setArchive(decodeArchive(bytes));
       } catch (err: any) {
-        console.error('Failed to fetch archive from Walrus', err);
         setError(err.message);
       } finally {
         setLoadingWalrus(false);

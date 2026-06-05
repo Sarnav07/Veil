@@ -19,12 +19,11 @@ export default function CreatePage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Form state
+  const [amountStr, setAmountStr] = useState('');
   const [depositStr, setDepositStr] = useState('');
   const [durationStr, setDurationStr] = useState('');
   const [reserveStr, setReserveStr] = useState('');
-  // For simplicity, we hardcode supplyCoin/assetCoin to 0x2::sui::SUI for testnet.
-  // In a real flow, the user would select from their wallet.
-  const coinType = '0x2::sui::SUI';
+  const [coinTypeStr, setCoinTypeStr] = useState('0x2::sui::SUI');
 
   const { deployLaunch, deployOtc } = useDeployAuction();
   const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
@@ -32,28 +31,31 @@ export default function CreatePage() {
   const handleDeploy = async () => {
     setErrorMsg(null);
     if (!account) return setErrorMsg('Please connect your wallet first.');
-    if (!depositStr || !durationStr || (mode === 'otc' && !reserveStr)) {
+    if (!amountStr || !depositStr || !durationStr || !coinTypeStr || (mode === 'otc' && !reserveStr)) {
       return setErrorMsg('Please fill in all required fields.');
     }
+    if (isNaN(Number(amountStr)) || Number(amountStr) <= 0) return setErrorMsg('Amount must be a positive number.');
+    if (isNaN(Number(depositStr)) || Number(depositStr) <= 0) return setErrorMsg('Deposit must be a positive number.');
+    if (isNaN(Number(durationStr)) || Number(durationStr) <= 0) return setErrorMsg('Duration must be a positive number.');
+    if (mode === 'otc' && (isNaN(Number(reserveStr)) || Number(reserveStr) <= 0)) return setErrorMsg('Reserve price must be a positive number.');
     
     setIsSubmitting(true);
     try {
-      // 1 SUI = 1_000_000_000 MIST
-      const deposit = BigInt(Number(depositStr) * 1_000_000_000);
-      const closeMs = BigInt(Date.now() + Number(durationStr) * 60 * 1000);
+      const amount = BigInt(Math.floor(Number(amountStr) * 1_000_000_000));
+      const deposit = BigInt(Math.floor(Number(depositStr) * 1_000_000_000));
+      const closeMs = BigInt(Date.now() + Math.floor(Number(durationStr) * 60 * 1000));
 
       let tx;
       if (mode === 'launch') {
-        tx = await deployLaunch(coinType, '0x0', deposit, closeMs);
+        tx = await deployLaunch(coinTypeStr, amount, deposit, closeMs);
       } else {
-        const reserve = BigInt(Number(reserveStr) * 1_000_000_000);
-        tx = await deployOtc(coinType, '0x0', deposit, closeMs, reserve);
+        const reserve = BigInt(Math.floor(Number(reserveStr) * 1_000_000_000));
+        tx = await deployOtc(coinTypeStr, amount, deposit, closeMs, reserve);
       }
 
       await signAndExecute({ transaction: tx });
       router.push('/');
     } catch (err: any) {
-
       if (err.message?.includes('Rejected')) {
         // User cancelled in wallet, just reset state
         return;
@@ -69,20 +71,24 @@ export default function CreatePage() {
   };
 
   return (
-    <Shell className="max-w-2xl">
-      <p className="eyebrow text-accent mb-2">Create</p>
-      <h1 className="font-serif text-4xl font-bold tracking-tight mb-8">New Sealed Auction</h1>
+    <Shell className="max-w-xl mx-auto pt-24 pb-32">
+      <div className="font-mono text-[0.65rem] font-bold uppercase tracking-[0.25em] text-accent mb-6 text-center">
+        Create
+      </div>
+      <h1 className="font-serif text-5xl md:text-6xl tracking-tight leading-none mb-12 text-center text-text-primary">
+        New <em className="text-accent italic font-medium">Sealed</em> Auction
+      </h1>
 
       {/* Mode toggle */}
-      <div className="flex gap-2 mb-8">
+      <div className="flex gap-2 mb-12 p-1.5 bg-[#000000] rounded-full border border-border-subtle max-w-sm mx-auto shadow-[0_0_0_1px_rgba(58,232,109,0.06)_inset]">
         {(['launch', 'otc'] as const).map((m) => (
           <button
             key={m}
             onClick={() => setMode(m)}
-            className={`rounded-full px-4 py-2 text-sm font-medium transition-colors duration-150 ease-snappy ${
+            className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold transition-all duration-300 ease-snappy ${
               mode === m
-                ? 'bg-accent text-black shadow-[0_0_8px_var(--color-accent-dim)]'
-                : 'text-text-secondary hover:text-text-primary'
+                ? 'bg-accent text-black shadow-[0_0_20px_rgba(58,232,109,0.2)]'
+                : 'text-text-secondary hover:text-text-primary hover:bg-white/5'
             }`}
           >
             {m === 'launch' ? 'Token Launch' : 'OTC Dark Pool'}
@@ -91,13 +97,30 @@ export default function CreatePage() {
       </div>
 
       {errorMsg && (
-        <div className="rounded-xl border border-error/50 bg-error/10 px-4 py-3 mb-6 flex items-start gap-3">
+        <div className="rounded-2xl border border-error/50 bg-error/10 px-6 py-4 mb-8 flex items-start gap-4">
           <AlertCircle className="w-5 h-5 text-error shrink-0 mt-0.5" />
-          <p className="text-sm text-error">{errorMsg}</p>
+          <p className="text-sm text-error font-mono">{errorMsg}</p>
         </div>
       )}
 
-      <div className="glass p-6 space-y-5">
+      <div className="p-8 border border-border-subtle rounded-3xl bg-[#000000] shadow-[0_0_0_1px_rgba(58,232,109,0.06)_inset] space-y-8 relative overflow-hidden">
+        {/* Subtle background glow */}
+        <div className="absolute -top-24 -right-24 w-48 h-48 bg-accent/10 rounded-full blur-[80px] pointer-events-none" />
+
+        <Input 
+          label="Coin Type" 
+          placeholder="0x2::sui::SUI" 
+          type="text" 
+          value={coinTypeStr}
+          onChange={(e) => setCoinTypeStr(e.target.value)}
+        />
+        <Input 
+          label={mode === 'launch' ? 'Token Supply to Auction' : 'Asset Amount to Sell'}
+          placeholder="1000" 
+          type="number" 
+          value={amountStr}
+          onChange={(e) => setAmountStr(e.target.value)}
+        />
         <Input 
           label="Required Deposit" 
           placeholder="500" 
@@ -126,13 +149,13 @@ export default function CreatePage() {
           />
         )}
 
-        <div className="pt-2">
+        <div className="pt-4">
           <Button 
-            className="w-full text-base py-3" 
+            className="w-full py-6 text-base font-semibold !bg-accent !text-black rounded-full hover:!bg-[#4ade80] transition-colors border border-accent shadow-[0_0_20px_rgba(58,232,109,0.2)]"
             onClick={handleDeploy}
             disabled={!account || isSubmitting}
           >
-            {isSubmitting ? 'Deploying...' : mode === 'launch' ? 'Deploy Token Sale' : 'Deploy OTC RFQ'}
+            {isSubmitting ? 'Deploying on-chain...' : mode === 'launch' ? 'Deploy Token Sale ➔' : 'Deploy OTC Dark Pool ➔'}
           </Button>
         </div>
       </div>

@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 
 export interface AuctionState {
   id: string;
+  coinType: string;
   closeMs: number;
   deposit: bigint;
   hasArchive: boolean;
@@ -50,8 +51,13 @@ export function useAuctionState(auctionId: string) {
       }
     }
 
+    const typeStr = data.data.content.type;
+    const match = typeStr.match(/<(.+)>/);
+    const coinType = match ? match[1] : '0x2::sui::SUI';
+
     return {
       id: auctionId,
+      coinType,
       closeMs,
       deposit,
       hasArchive: archiveBlobId !== null,
