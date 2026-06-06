@@ -37,37 +37,21 @@ All on-chain reads and transaction execution flow through the **Tatum Sui RPC ga
 | ![Slide 1](docs/assets/slide1.png) | ![Slide 2](docs/assets/slide2.png) |
 | ![Slide 3](docs/assets/slide3.png) | ![Slide 4](docs/assets/slide4.png) |
 
-## Screenshots
-
-| | |
-|:--:|:--:|
-| ![Live Network explorer](apps/web/public/screenshots/dashboard.png) | ![Submit a sealed bid](apps/web/public/screenshots/submit-bid.png) |
-| **Live Network explorer** — active auctions, TVL and a live event feed, priced in USD live from the **Tatum Data API**. | **Submit a sealed bid** — encrypted client-side with **Seal**, stored on **Walrus**; only the SHA-256 commitment touches the chain. |
-
-| ![Create a sealed auction](apps/web/public/screenshots/create-auction.png) |
-|:--:|
-| **Create** a sealed token launch or an OTC dark pool — pick the asset, supply, deposit and close time, then deploy on-chain via the Tatum Sui RPC gateway. |
-
 ## The Three Primitives
 
-Veil is a shared sealed-bid engine (`settlement.move`) driving three products:
+Veil is a shared sealed-bid engine (`settlement.move`) driving three distinct products. We designed it this way so the core clearing logic is perfectly unit-tested in isolation:
 
-| Module | Product | Clearing rule | Commitment |
-|--------|---------|---------------|------------|
-| `auction.move` | **Single-item sealed auction** | First-price or Vickrey (second-price) | `sha2_256(bcs(amount) ‖ nonce)` |
-| `veil_launch.move` | **Fair token launch** | Uniform-price, pro-rata at the margin | `sha2_256(bcs(price) ‖ bcs(qty) ‖ nonce)` |
-| `veil_otc.move` | **OTC dark pool (RFQ)** | Highest sealed quote ≥ a **hidden reserve** | quote `sha2_256(bcs(price) ‖ nonce)`; reserve `sha2_256(bcs(reserve) ‖ nonce)` |
-
-In the launch, all winners pay the same marginal clearing price — so there's no advantage to being the fastest bot, only to bidding honestly. In OTC, the maker's reserve floor is itself a hidden commitment, so counterparties can't reverse-engineer and squeeze it.
+- **Single-Item Sealed Auction (`auction.move`):** Clears using a First-price or Vickrey (second-price) model. The on-chain commitment is simply a hash of the bid amount and a nonce.
+- **Fair Token Launch (`veil_launch.move`):** Uses uniform-price clearing, allocated pro-rata at the margin. Every winner pays the exact same marginal clearing price. This completely eliminates the advantage of being the fastest bot, rewarding honest price discovery instead.
+- **OTC Dark Pool (`veil_otc.move`):** An RFQ model where the highest sealed quote wins, provided it meets a **hidden reserve floor**. The maker's reserve floor is itself a hidden cryptographic commitment, meaning counterparties cannot reverse-engineer or squeeze the floor price.
 
 ## Sponsor Integrations
 
-| Sponsor | Role | Where it lives |
-|---------|------|----------------|
-| **Sui** | Settlement layer — Move contracts, sealed-bid state machine, fully on-chain payout via PTBs. | `move/veil/sources/*`, deployed package in [docs/ADDRESSES.md](./docs/ADDRESSES.md) |
-| **Walrus** | **Core storage** — every encrypted bid/quote ciphertext and the maker's hidden reserve live on Walrus; the chain holds only the blob ID. The settlement audit record is archived back to Walrus and linked on-chain. **Smart Lifetime Strategy:** Bids are stored for exactly 1 epoch (just long enough to settle, reducing costs), while the decrypted settlement records are anchored for 90 epochs as a permanent, immutable audit trail. | `packages/sdk/src/walrus.ts`, `add_archive` in the Move modules |
-| **Tatum** | **Sui RPC + Data API** — *all* of the dApp's on-chain reads and tx execution are proxied through the Tatum Sui gateway (`/api/rpc`, server-side key). The Data API (`/api/rates`) provides live SUI/USD for the header price pill, bid conversions, and the keeper's mark-to-market. | `apps/web/app/api/rpc/route.ts`, `apps/web/app/api/rates/route.ts`, `packages/sdk/src/tatum.ts` |
-| **Seal** | Time-lock encryption — Threshold IBE keyed to the auction ID + close time, so bids are mechanically un-decryptable until the auction ends. | `packages/sdk/src/seal.ts`, `move/veil/sources/seal_policy.move` |
+- **Sui:** The settlement layer. We use Move contracts to enforce the state machine and handle fully on-chain payouts using Programmable Transaction Blocks (PTBs).
+- **Walrus (Core Storage):** Every encrypted bid ciphertext and the maker's hidden reserve live entirely on Walrus. The Sui blockchain only holds the blob ID. 
+  - *Smart Epoch Strategy:* To optimize costs, live bids are stored ephemerally for exactly 1 epoch (just long enough to settle). However, the final decrypted settlement audit records are archived permanently for 90 epochs, creating a trustless historical trail.
+- **Tatum (RPC & Data API):** We proxy 100% of the DApp's on-chain reads and transaction executions server-side through the Tatum Sui Gateway. We also utilize the Tatum Data API to stream live SUI/USD exchange rates into our UI and our Keeper's mark-to-market settlement logic.
+- **Mysten Seal:** Time-locked encryption. We use Threshold IBE keyed to the auction ID and close time, guaranteeing that bids are mechanically un-decryptable by anyone until the auction successfully ends.
 
 ## Security Model
 
@@ -125,6 +109,9 @@ See [docs/ADDRESSES.md](./docs/ADDRESSES.md). Full design rationale in [docs/WHI
 
 ## Team
 - **Sarnav07** — Full Stack / Smart Contracts
+- **Chainer_Rio** — [Twitter (@Chainer_Rio)](https://x.com/Chainer_Rio)
+
+**Project Handle:** [@veil_sui](https://x.com/veil_sui)
 
 ## License
 MIT
