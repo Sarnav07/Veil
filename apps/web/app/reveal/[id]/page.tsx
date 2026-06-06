@@ -107,7 +107,7 @@ export default function RevealPage({ params }: { params: { id: string } }) {
               </div>
               {blobId && (
                 <a 
-                  href={`${walrusAggregatorUrl}/v1/${blobId}`}
+                  href={`${walrusAggregatorUrl}/v1/blobs/${blobId}`}
                   target="_blank"
                   rel="noreferrer"
                   className="flex items-center space-x-1 text-xs text-text-secondary hover:text-accent transition-colors"
