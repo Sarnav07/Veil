@@ -24,8 +24,6 @@ const EBiddingStillOpen: u64 = 3;
 const EBadCloseTime: u64 = 4;
 const EWrongDeposit: u64 = 5;
 const ERevealMismatch: u64 = 6;
-const EBidAboveDeposit: u64 = 7;
-const EBadCommitment: u64 = 8;
 
 public struct Bid has store {
     bidder: address,
@@ -44,6 +42,8 @@ public struct Sale<phantom T> has key {
     deposit: u64,
     bids: vector<Bid>,
     archive_blob_id: Option<vector<u8>>,
+    reserve_commitment: vector<u8>,
+    reserve_blob_id: vector<u8>,
 }
 
 public struct SaleCreated has copy, drop {
@@ -75,6 +75,8 @@ public fun new<T>(
     supply: Coin<T>,
     close_ms: u64,
     deposit: u64,
+    reserve_commitment: vector<u8>,
+    reserve_blob_id: vector<u8>,
     clock: &Clock,
     ctx: &mut TxContext,
 ): Sale<T> {
@@ -88,6 +90,8 @@ public fun new<T>(
         deposit,
         bids: vector[],
         archive_blob_id: option::none(),
+        reserve_commitment,
+        reserve_blob_id,
     };
     event::emit(SaleCreated {
         sale: object::id(&sale),
@@ -103,10 +107,12 @@ public fun create<T>(
     supply: Coin<T>,
     close_ms: u64,
     deposit: u64,
+    reserve_commitment: vector<u8>,
+    reserve_blob_id: vector<u8>,
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
-    transfer::share_object(new(supply, close_ms, deposit, clock, ctx));
+    transfer::share_object(new(supply, close_ms, deposit, reserve_commitment, reserve_blob_id, clock, ctx));
 }
 
 /// Place a sealed bid: escrow exactly the sale's deposit and record the commitment +
@@ -146,19 +152,30 @@ public fun close<T>(sale: &mut Sale<T>, clock: &Clock) {
 /// the proceeds and any unsold supply.
 public fun settle<T>(
     sale: &mut Sale<T>,
-    prices: vector<u64>,
-    quantities: vector<u64>,
-    nonces: vector<vector<u8>>,
+    mut prices: vector<u64>,
+    mut quantities: vector<u64>,
+    mut nonces: vector<vector<u8>>,
+    mut reserve: u64,
+    reserve_nonce: vector<u8>,
     ctx: &mut TxContext,
 ) {
     assert!(sale.state == STATE_REVEALING, EWrongState);
-    let n = vector::length(&sale.bids);
+    let mut n = vector::length(&sale.bids);
     assert!(
         vector::length(&prices) == n
             && vector::length(&quantities) == n
             && vector::length(&nonces) == n,
         ERevealMismatch,
     );
+
+    // Verify the reserve commitment before touching anything else.
+    let mut reserve_preimage = std::bcs::to_bytes(&reserve);
+    vector::append(&mut reserve_preimage, reserve_nonce);
+    
+    // 🚨 FIX: DoS protection for maker reserve
+    if (std::hash::sha2_256(reserve_preimage) != sale.reserve_commitment) {
+        reserve = 0xffffffffffffffff; // Set to MAX_U64 so no bid can meet it
+    };
 
     let sale_id = object::id(sale);
 
@@ -173,19 +190,30 @@ public fun settle<T>(
     while (i < n) {
         let price = *vector::borrow(&prices, i);
         let qty = *vector::borrow(&quantities, i);
-        assert!((price as u128) * (qty as u128) <= (sale.deposit as u128), EBidAboveDeposit);
         let mut preimage = std::bcs::to_bytes(&price);
         vector::append(&mut preimage, std::bcs::to_bytes(&qty));
         vector::append(&mut preimage, *vector::borrow(&nonces, i));
-        assert!(
-            std::hash::sha2_256(preimage) == vector::borrow(&sale.bids, i).commitment,
-            EBadCommitment,
-        );
-        i = i + 1;
+        
+        // 🚨 FIX: Zero-Cost Cheater protection via complete disqualification
+        if (std::hash::sha2_256(preimage) != vector::borrow(&sale.bids, i).commitment || ((price as u128) * (qty as u128) > (sale.deposit as u128))) {
+            vector::remove(&mut prices, i);
+            vector::remove(&mut quantities, i);
+            vector::remove(&mut nonces, i);
+            let Bid { bidder, deposit, blob_id: _, commitment: _ } = vector::remove(&mut sale.bids, i);
+            send_or_destroy(deposit, bidder, ctx);
+            n = n - 1;
+        } else {
+            i = i + 1;
+        };
+    };
+
+    if (n == 0) {
+        settle_empty(sale, sale_id, ctx);
+        return
     };
 
     let supply = balance::value(&sale.supply);
-    let (clearing_price, alloc) = settlement::uniform_clear(&prices, &quantities, supply);
+    let (clearing_price, alloc) = settlement::uniform_clear(&prices, &quantities, supply, reserve);
 
     // Pay out each bid in turn, draining `bids` from the back so the popped index
     // lines up with `alloc`.

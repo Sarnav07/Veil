@@ -34,17 +34,24 @@ export async function POST(request: Request) {
     
     // Fallback to public node if Tatum rate limits us (429) or gives 5xx
     if (apiKey && (upstream.status === 429 || upstream.status >= 500)) {
+      console.warn(`[Veil RPC] Tatum Gateway returned HTTP ${upstream.status}. Falling back to public fullnode.`);
       upstream = await fetch(PUBLIC_FALLBACK_RPC, { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' }, 
         body 
       });
+    } else if (apiKey && upstream.status === 200) {
+      console.log(`[Veil RPC] Proxied to Tatum Gateway successfully`);
     }
 
     const text = await upstream.text();
+    const isTatum = apiKey && target === TATUM_RPC_URL && !(upstream.status === 429 || upstream.status >= 500);
     return new NextResponse(text, {
       status: upstream.status,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Tatum-Routed': isTatum ? 'true' : 'false'
+      },
     });
   } catch {
     return NextResponse.json(

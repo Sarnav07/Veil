@@ -54,7 +54,7 @@ fun uniform_undersubscribed_fills_all_at_lowest() {
     // demand 30 < supply 100: everyone wins, price is the lowest bid.
     let prices = vector[10u64, 8, 12];
     let qtys = vector[10u64, 10, 10];
-    let (price, alloc) = settlement::uniform_clear(&prices, &qtys, 100);
+    let (price, alloc) = settlement::uniform_clear(&prices, &qtys, 100, 0);
     assert!(price == 8, 0);
     assert!(alloc == vector[10u64, 10, 10], 1);
 }
@@ -64,7 +64,7 @@ fun uniform_exactly_filled() {
     // demand 100 == supply 100: full fill, clearing at the marginal bid's price.
     let prices = vector[10u64, 7, 9];
     let qtys = vector[40u64, 30, 30];
-    let (price, alloc) = settlement::uniform_clear(&prices, &qtys, 100);
+    let (price, alloc) = settlement::uniform_clear(&prices, &qtys, 100, 0);
     assert!(price == 7, 0);
     assert!(alloc == vector[40u64, 30, 30], 1);
     assert!(sum(&alloc) == 100, 2);
@@ -76,7 +76,7 @@ fun uniform_oversubscribed_prorata_at_margin() {
     // remaining 40, so each gets floor(60*40/120)=20; bid 3 @5 is below clearing.
     let prices = vector[20u64, 10, 10, 5];
     let qtys = vector[60u64, 60, 60, 50];
-    let (price, alloc) = settlement::uniform_clear(&prices, &qtys, 100);
+    let (price, alloc) = settlement::uniform_clear(&prices, &qtys, 100, 0);
     assert!(price == 10, 0);
     assert!(alloc == vector[60u64, 20, 20, 0], 1);
     assert!(sum(&alloc) <= 100, 2);
@@ -88,7 +88,7 @@ fun uniform_prorata_floors_within_supply() {
     // one unit left unallocated. Allocations must never exceed supply.
     let prices = vector[5u64, 5, 5];
     let qtys = vector[7u64, 7, 7];
-    let (price, alloc) = settlement::uniform_clear(&prices, &qtys, 10);
+    let (price, alloc) = settlement::uniform_clear(&prices, &qtys, 10, 0);
     assert!(price == 5, 0);
     assert!(alloc == vector[3u64, 3, 3], 1);
     assert!(sum(&alloc) <= 10, 2);
@@ -98,7 +98,7 @@ fun uniform_prorata_floors_within_supply() {
 fun uniform_empty_clears_at_zero() {
     let prices = vector<u64>[];
     let qtys = vector<u64>[];
-    let (price, alloc) = settlement::uniform_clear(&prices, &qtys, 100);
+    let (price, alloc) = settlement::uniform_clear(&prices, &qtys, 100, 0);
     assert!(price == 0, 0);
     assert!(vector::length(&alloc) == 0, 1);
 }
@@ -107,15 +107,25 @@ fun uniform_empty_clears_at_zero() {
 fun uniform_zero_supply_allocates_nothing() {
     let prices = vector[10u64, 20];
     let qtys = vector[5u64, 5];
-    let (price, alloc) = settlement::uniform_clear(&prices, &qtys, 0);
+    let (price, alloc) = settlement::uniform_clear(&prices, &qtys, 0, 0);
     assert!(price == 0, 0);
     assert!(alloc == vector[0u64, 0], 1);
 }
 
 #[test]
 #[expected_failure(abort_code = settlement::ELengthMismatch)]
-fun uniform_length_mismatch_aborts() {
-    let prices = vector[10u64, 20];
-    let qtys = vector[5u64];
-    let (_p, _a) = settlement::uniform_clear(&prices, &qtys, 100);
+fun uniform_mismatch() {
+    let prices = vector[1u64, 2];
+    let qtys = vector[1u64];
+    let (_p, _a) = settlement::uniform_clear(&prices, &qtys, 100, 0);
+}
+
+#[test]
+fun uniform_reserve_price() {
+    let prices = vector[10u64, 8, 4];
+    let qtys = vector[10u64, 10, 10];
+    let (price, alloc) = settlement::uniform_clear(&prices, &qtys, 100, 8);
+    // Bids below 8 get 0 allocation. Clearing price should be 8.
+    assert!(price == 8, 0);
+    assert!(alloc == vector[10u64, 10, 0], 1);
 }

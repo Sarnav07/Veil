@@ -11,8 +11,27 @@ export function useDeployAuction() {
     coinType: string,
     supplyAmount: bigint, // Changed from supplyCoin: string
     deposit: bigint,
-    closeMs: bigint
+    closeMs: bigint,
+    reservePrice: bigint
   ) => {
+    const sealVault = new SealVault({
+      suiClient,
+      keyServerObjectIds: config.sealKeyServerObjectIds,
+      packageId: config.packageId,
+    });
+    const walrus = new WalrusClient({
+      publisherUrl: config.walrusPublisherUrl,
+      aggregatorUrl: config.walrusAggregatorUrl,
+    });
+
+    const reserveNonce = randomNonce();
+    const payload = encodeReserve({ reserve: reservePrice, reserveNonce });
+    const commitment = await commit(payload);
+
+    const ciphertext = await sealVault.sealBid(payload, closeMs);
+    const blobIdStr = await walrus.store(ciphertext, 1);
+    const reserveBlobId = new TextEncoder().encode(blobIdStr);
+
     const tx = new Transaction();
     
     // Split the supply amount from gas since we assume coinType is SUI for now
@@ -20,6 +39,8 @@ export function useDeployAuction() {
 
     LaunchTxBuilder.create(tx, config.packageId, {
       supplyCoin,
+      reserveCommitment: commitment,
+      reserveBlobId,
       closeMs,
       deposit,
       coinType,

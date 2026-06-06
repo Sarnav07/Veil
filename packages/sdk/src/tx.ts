@@ -4,7 +4,7 @@ export const LaunchTxBuilder = {
   create(
     tx: Transaction,
     packageId: string,
-    args: { supplyCoin: string | any; closeMs: bigint; deposit: bigint; coinType: string; clock?: string },
+    args: { supplyCoin: string | any; reserveCommitment: Uint8Array; reserveBlobId: Uint8Array; closeMs: bigint; deposit: bigint; coinType: string; clock?: string },
   ) {
     tx.moveCall({
       target: `${packageId}::veil_launch::create`,
@@ -13,6 +13,8 @@ export const LaunchTxBuilder = {
         typeof args.supplyCoin === 'string' ? tx.object(args.supplyCoin) : args.supplyCoin,
         tx.pure.u64(args.closeMs),
         tx.pure.u64(args.deposit),
+        tx.pure.vector('u8', Array.from(args.reserveCommitment)),
+        tx.pure.vector('u8', Array.from(args.reserveBlobId)),
         tx.object(args.clock ?? '0x6'),
       ],
     });
@@ -51,7 +53,7 @@ export const LaunchTxBuilder = {
   settle(
     tx: Transaction,
     packageId: string,
-    args: { sale: string; prices: bigint[]; quantities: bigint[]; nonces: Uint8Array[]; coinType: string },
+    args: { sale: string; prices: bigint[]; quantities: bigint[]; nonces: Uint8Array[]; reserve: bigint; reserveNonce: Uint8Array; coinType: string },
   ) {
     tx.moveCall({
       target: `${packageId}::veil_launch::settle`,
@@ -70,6 +72,8 @@ export const LaunchTxBuilder = {
           'vector<u8>',
           args.nonces.map((n) => Array.from(n)),
         ),
+        tx.pure.u64(args.reserve),
+        tx.pure.vector('u8', Array.from(args.reserveNonce)),
       ],
     });
   },

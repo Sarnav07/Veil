@@ -11,7 +11,7 @@ export interface VeilConfig {
 // verified Seal key-server object ids. Override any of them with NEXT_PUBLIC_* env
 // vars for a different deployment.
 const DEFAULTS = {
-  packageId: '0x0c2de006e73edc43734c63fd031e0ac57acd01f03260c5281bff69aa0999eba8',
+  packageId: '0xe519726f67050bfee2538afdc8ff262f77de450bfb5591c7d06d9c764e440a54',
   walrusPublisherUrl: 'https://publisher.walrus-testnet.walrus.space',
   walrusAggregatorUrl: 'https://aggregator.walrus-testnet.walrus.space',
   sealKeyServerObjectIds:

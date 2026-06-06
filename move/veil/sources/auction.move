@@ -21,8 +21,6 @@ const EBiddingStillOpen: u64 = 3;
 const EBadCloseTime: u64 = 4;
 const EWrongDeposit: u64 = 5;
 const ERevealMismatch: u64 = 6;
-const EBidAboveDeposit: u64 = 7;
-const EBadCommitment: u64 = 8;
 
 public struct Bid has store {
     bidder: address,
@@ -138,12 +136,12 @@ public fun close<T: key + store>(auction: &mut Auction<T>, clock: &Clock) {
 /// its deposit, everyone else is fully refunded, and the item goes to the winner.
 public fun settle<T: key + store>(
     auction: &mut Auction<T>,
-    amounts: vector<u64>,
-    nonces: vector<vector<u8>>,
+    mut amounts: vector<u64>,
+    mut nonces: vector<vector<u8>>,
     ctx: &mut TxContext,
 ) {
     assert!(auction.state == STATE_REVEALING, EWrongState);
-    let n = vector::length(&auction.bids);
+    let mut n = vector::length(&auction.bids);
     assert!(vector::length(&amounts) == n && vector::length(&nonces) == n, ERevealMismatch);
 
     let auction_id = object::id(auction);
@@ -165,14 +163,50 @@ public fun settle<T: key + store>(
     let mut i = 0;
     while (i < n) {
         let amount = *vector::borrow(&amounts, i);
-        assert!(amount <= auction.deposit, EBidAboveDeposit);
         let mut preimage = std::bcs::to_bytes(&amount);
         vector::append(&mut preimage, *vector::borrow(&nonces, i));
-        assert!(std::hash::sha2_256(preimage) == vector::borrow(&auction.bids, i).commitment, EBadCommitment);
-        i = i + 1;
+        
+        // 🚨 FIX: Zero-Cost Cheater protection via complete disqualification
+        if (std::hash::sha2_256(preimage) != vector::borrow(&auction.bids, i).commitment || amount > auction.deposit) {
+            vector::remove(&mut amounts, i);
+            vector::remove(&mut nonces, i);
+            let Bid { bidder, deposit, blob_id: _, commitment: _ } = vector::remove(&mut auction.bids, i);
+            send_or_destroy(deposit, bidder, ctx);
+            n = n - 1;
+        } else {
+            i = i + 1;
+        };
+    };
+
+    if (n == 0) {
+        let item = option::extract(&mut auction.item);
+        transfer::public_transfer(item, auction.seller);
+        auction.state = STATE_SETTLED;
+        event::emit(AuctionSettled {
+            auction: auction_id,
+            winner: auction.seller,
+            price: 0,
+            bid_count: 0,
+        });
+        return
     };
 
     let (winner_index, price) = settlement::clear(&amounts, auction.pricing);
+
+    // 🚨 FIX: Zero-Cost Cheater protection. An auction must clear strictly above 0.
+    if (price == 0) {
+        let mut k = n;
+        while (k > 0) {
+            k = k - 1;
+            let Bid { bidder, deposit, blob_id: _, commitment: _ } = vector::pop_back(&mut auction.bids);
+            send_or_destroy(deposit, bidder, ctx);
+        };
+        let item = option::extract(&mut auction.item);
+        transfer::public_transfer(item, auction.seller);
+        auction.state = STATE_SETTLED;
+        event::emit(AuctionSettled { auction: auction_id, winner: auction.seller, price: 0, bid_count: n });
+        return
+    };
     let winner = vector::borrow(&auction.bids, winner_index).bidder;
 
     let mut k = n;

@@ -68,6 +68,7 @@ public fun uniform_clear(
     prices: &vector<u64>,
     quantities: &vector<u64>,
     supply: u64,
+    reserve: u64,
 ): (u64, vector<u64>) {
     let n = vector::length(prices);
     assert!(vector::length(quantities) == n, ELengthMismatch);
@@ -84,12 +85,21 @@ public fun uniform_clear(
 
     // Walk the demand curve down to find the marginal price: the price at which
     // cumulative demand first reaches (or passes) supply.
+    // However, if the price drops below the reserve, we stop.
     let mut filled = 0;
     let mut clearing_price = *vector::borrow(prices, *vector::borrow(&order, 0));
+    // If even the highest bid is below reserve, it clears at 0 with no allocations.
+    if (clearing_price < reserve) {
+        return (0, alloc)
+    };
+
     let mut p = 0;
     while (p < n) {
         let idx = *vector::borrow(&order, p);
-        clearing_price = *vector::borrow(prices, idx);
+        let current_price = *vector::borrow(prices, idx);
+        if (current_price < reserve) break;
+
+        clearing_price = current_price;
         filled = filled + *vector::borrow(quantities, idx);
         if (filled >= supply) break;
         p = p + 1;
@@ -102,6 +112,7 @@ public fun uniform_clear(
         let idx = *vector::borrow(&order, q);
         let price = *vector::borrow(prices, idx);
         if (price == clearing_price) break;
+        if (price < reserve) break; // sanity check
         let want = *vector::borrow(quantities, idx);
         let take = if (want <= remaining) want else remaining;
         *vector::borrow_mut(&mut alloc, idx) = take;

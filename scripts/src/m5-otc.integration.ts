@@ -31,6 +31,23 @@ const KEY_SERVERS = optionalEnv(
   .map((id) => id.trim())
   .filter((id) => id.length > 0);
 
+// ✅ FIX: Replaced the blind sleep() with a robust retry loop
+async function readWithRetry(walrus: WalrusClient, blobId: string, maxRetries = 5, delayMs = 2000): Promise<Uint8Array> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      console.log(`  Attempt ${i + 1}: Fetching blob ${blobId}...`);
+      return await walrus.read(blobId);
+    } catch (err: any) {
+      if (i === maxRetries - 1) {
+        throw new Error(`Failed to fetch blob after ${maxRetries} attempts. Network may be down.`);
+      }
+      console.log(`  Blob not synced yet. Waiting ${delayMs}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  throw new Error("Unreachable");
+}
+
 // Three sample quotes competing against a hidden reserve.
 const SAMPLE_QUOTES = [
   { price: 8_000_000n },
@@ -97,13 +114,13 @@ async function main(): Promise<void> {
   const stored: Array<{ index: number; blobId: string }> = [];
   for (const [i, { payload }] of encoded.entries()) {
     const ciphertext = await vault.sealBid(payload, closeMs);
-    const blobId = await walrus.store(ciphertext);
+    const blobId = await walrus.store(ciphertext, 5);
     stored.push({ index: i, blobId });
     console.log(`  [${i}] blobId=${blobId}`);
   }
   console.log('\nSeal + Walrus round-trip for maker reserve:');
   const reserveCiphertext = await vault.sealBid(encodedReserveBytes, closeMs);
-  const reserveBlobId = await walrus.store(reserveCiphertext);
+  const reserveBlobId = await walrus.store(reserveCiphertext, 5);
   console.log(`  reserveBlobId=${reserveBlobId}`);
 
   console.log('\nTesting decryption (keeper flow):');
@@ -124,13 +141,13 @@ async function main(): Promise<void> {
   const entries: RevealedEntry[] = [];
   for (const { index, blobId } of stored) {
     console.log(`  Fetching + decrypting quote blob ${blobId}...`);
-    const ciphertext = await walrus.read(blobId);
+    const ciphertext = await readWithRetry(walrus, blobId);
     const plaintext = await vault.unsealBid(ciphertext, closeMs, sessionKey);
     entries.push({ index, plaintext });
   }
 
   console.log(`  Fetching + decrypting reserve blob ${reserveBlobId}...`);
-  const fetchedReserveCiphertext = await walrus.read(reserveBlobId);
+  const fetchedReserveCiphertext = await readWithRetry(walrus, reserveBlobId);
   const fetchedReservePlaintext = await vault.unsealBid(fetchedReserveCiphertext, closeMs, sessionKey);
   const decodedReserve = decodeReserve(fetchedReservePlaintext);
   console.log(`  Unsealed reserve: ${decodedReserve.reserve} MIST`);

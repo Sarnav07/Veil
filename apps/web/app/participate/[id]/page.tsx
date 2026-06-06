@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { useExchangeRate } from '@/hooks/useExchangeRate';
 import { useSubmitBid } from '@/hooks/useSubmitBid';
 import { useAuctionState } from '@/hooks/useAuctionState';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Copy, Check } from 'lucide-react';
 
 export default function ParticipatePage({ params }: { params: { id: string } }) {
   const account = useCurrentAccount();
@@ -21,6 +21,8 @@ export default function ParticipatePage({ params }: { params: { id: string } }) 
   const [qtyStr, setQtyStr] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [hasCopied, setHasCopied] = useState(false);
   
   const { data: rate } = useExchangeRate();
   const { submitLaunchBid, submitOtcQuote } = useSubmitBid();
@@ -66,7 +68,7 @@ export default function ParticipatePage({ params }: { params: { id: string } }) 
       }
 
       await signAndExecute({ transaction: tx });
-      router.push('/');
+      setIsSuccess(true);
     } catch (err: any) {
 
       if (err.message?.includes('Rejected')) {
@@ -166,47 +168,124 @@ export default function ParticipatePage({ params }: { params: { id: string } }) 
           </div>
         )}
 
-        <Input 
-          label="Bid Amount" 
-          placeholder="0.00" 
-          suffix="SUI" 
-          type="number"
-          value={bidStr}
-          onChange={(e) => setBidStr(e.target.value)}
-          disabled={auctionState.isClosed}
-        />
-
-        {auctionType === 'launch' && (
-          <Input 
-            label="Bid Quantity" 
-            placeholder="How many tokens do you want?" 
-            type="number"
-            value={qtyStr}
-            onChange={(e) => setQtyStr(e.target.value)}
-            disabled={auctionState.isClosed}
-          />
-        )}
-
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-text-secondary font-mono">
-            ≈ ${fiatValue} USD <span className="text-text-secondary/50">· via Tatum</span>
-          </p>
-          {account && (
-            <p className={`text-xs font-mono ${hasInsufficientBalance ? 'text-error' : 'text-text-secondary'}`}>
-              Balance: {(Number(balance) / 1e9).toFixed(2)} SUI
+        {isSuccess ? (
+          <div className="flex flex-col items-center justify-center py-12 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="w-16 h-16 bg-accent/10 text-accent rounded-full flex items-center justify-center mb-4">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-serif">Bid Encrypted & Secured</h3>
+            <p className="text-text-secondary text-center max-w-sm">
+              Your sealed bid has been processed. The cipher will remain encrypted until the auction closes.
             </p>
-          )}
-        </div>
+            <div className="pt-6">
+              <Button href="/" className="px-8 py-3 !bg-white/5 !text-white border border-white/10 hover:!bg-white/10">
+                Return to Dashboard
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            <div className="p-4 rounded-xl border border-border-subtle bg-[#0a0a0a]">
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span className="text-text-secondary">Auction ID</span>
+                <div className="flex items-center gap-2 font-mono text-text-primary ml-4">
+                  <span>{params.id.slice(0, 10)}...</span>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(params.id);
+                      setHasCopied(true);
+                      setTimeout(() => setHasCopied(false), 2000);
+                    }}
+                    className="p-1 hover:bg-white/10 rounded transition-colors"
+                    title="Copy full Auction ID"
+                  >
+                    {hasCopied ? <Check size={14} className="text-primary" /> : <Copy size={14} className="text-text-secondary hover:text-text-primary" />}
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-sm mb-2">
+                <span className="text-text-secondary">Closes In</span>
+                <span className="font-mono text-text-primary">
+                  {hrs > 0 && `${hrs}h `}{mins}m
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-text-secondary">Required Deposit</span>
+                <span className="font-mono text-text-primary">
+                  {Number(auctionState.deposit) / 1_000_000_000} SUI
+                </span>
+              </div>
+            </div>
 
-        <div className="pt-4">
-          <Button 
-            className="w-full py-6 text-base font-semibold !bg-accent !text-black rounded-full hover:!bg-[#4ade80] transition-colors border border-accent shadow-[0_0_20px_rgba(58,232,109,0.2)]"
-            onClick={handleBid}
-            disabled={!account || isSubmitting || auctionState.isClosed || !bidStr || hasInsufficientBalance || Number(bidStr) <= 0}
-          >
-            {hasInsufficientBalance ? 'Insufficient Balance' : isSubmitting ? 'Submitting on-chain...' : 'Encrypt & Submit Bid ➔'}
-          </Button>
-        </div>
+            {errorMsg && (
+              <div className="p-4 rounded-lg bg-error/10 border border-error/20 flex items-start gap-3 text-error text-sm">
+                <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                <p>{errorMsg}</p>
+              </div>
+            )}
+
+            {auctionType === 'launch' && (
+              <div className="space-y-2 relative group">
+                <label className="text-xs font-mono uppercase tracking-wider text-text-secondary ml-1">
+                  Quantity
+                </label>
+                <div className="relative">
+                  <Input 
+                    type="number"
+                    placeholder="1000"
+                    value={qtyStr}
+                    onChange={(e) => setQtyStr(e.target.value)}
+                    className="w-full text-lg pr-24 pl-4 py-4 !bg-[#050505] !border-border-subtle focus:!border-accent/50 transition-colors"
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-mono text-text-secondary uppercase">
+                    Tokens
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-2 relative group">
+              <label className="text-xs font-mono uppercase tracking-wider text-text-secondary ml-1 flex justify-between">
+                <span>{auctionType === 'launch' ? 'Price per Token' : 'Total Quote'}</span>
+                {rate && bidStr && (
+                  <span className="text-accent">~${fiatValue} USD</span>
+                )}
+              </label>
+              <div className="relative">
+                <Input 
+                  type="number"
+                  placeholder="0.00"
+                  value={bidStr}
+                  onChange={(e) => setBidStr(e.target.value)}
+                  className="w-full text-lg pr-16 pl-4 py-4 !bg-[#050505] !border-border-subtle focus:!border-accent/50 transition-colors font-mono"
+                />
+                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-sm font-mono text-text-secondary">
+                  SUI
+                </div>
+              </div>
+            </div>
+
+            <Button
+              className="w-full py-6 text-base font-semibold !bg-accent !text-black rounded-full hover:!bg-[#4ade80] transition-colors border border-accent shadow-[0_0_20px_rgba(58,232,109,0.2)] mt-8"
+              onClick={handleBid}
+              disabled={isSubmitting || hasInsufficientBalance || closesInMs === 0}
+            >
+              {isSubmitting 
+                ? 'Sealing Bid on Walrus...' 
+                : closesInMs === 0 
+                  ? 'Auction Closed' 
+                  : hasInsufficientBalance 
+                    ? 'Insufficient SUI' 
+                    : `Submit Sealed ${auctionType === 'launch' ? 'Bid' : 'Quote'} ➔`}
+            </Button>
+            
+            <p className="text-center text-xs text-text-secondary mt-4 max-w-sm mx-auto">
+              Your bid will be encrypted using <a href="https://docs.sui.io" target="_blank" rel="noreferrer" className="text-accent hover:underline">Sui Walrus</a>. It cannot be decrypted until the auction closes.
+            </p>
+          </div>
+        )}
       </div>
     </Shell>
   );

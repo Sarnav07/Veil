@@ -28,6 +28,23 @@ const KEY_SERVERS = optionalEnv(
   .map((id) => id.trim())
   .filter((id) => id.length > 0);
 
+// ✅ FIX: Replaced the blind sleep() with a robust retry loop
+async function readWithRetry(walrus: WalrusClient, blobId: string, maxRetries = 5, delayMs = 2000): Promise<Uint8Array> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      console.log(`  Attempt ${i + 1}: Fetching blob ${blobId}...`);
+      return await walrus.read(blobId);
+    } catch (err: any) {
+      if (i === maxRetries - 1) {
+        throw new Error(`Failed to fetch blob after ${maxRetries} attempts. Network may be down.`);
+      }
+      console.log(`  Blob not synced yet. Waiting ${delayMs}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  throw new Error("Unreachable");
+}
+
 // Three sample bids: high-price big-qty, mid-price, low-price small-qty.
 const SAMPLE_BIDS = [
   { price: 5_000_000n, qty: 100n },
@@ -86,7 +103,7 @@ async function main(): Promise<void> {
   const stored: Array<{ index: number; blobId: string }> = [];
   for (const [i, { payload }] of encoded.entries()) {
     const ciphertext = await vault.sealBid(payload, closeMs);
-    const blobId = await walrus.store(ciphertext);
+    const blobId = await walrus.store(ciphertext, 5);
     stored.push({ index: i, blobId });
     console.log(`  [${i}] blobId=${blobId}`);
   }
@@ -109,7 +126,7 @@ async function main(): Promise<void> {
   const entries: RevealedEntry[] = [];
   for (const { index, blobId } of stored) {
     console.log(`  Fetching + decrypting blob ${blobId}...`);
-    const ciphertext = await walrus.read(blobId);
+    const ciphertext = await readWithRetry(walrus, blobId);
     const plaintext = await vault.unsealBid(ciphertext, closeMs, sessionKey);
     entries.push({ index, plaintext });
   }

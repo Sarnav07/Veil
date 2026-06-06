@@ -208,9 +208,9 @@ export default function Dashboard() {
                   <img src="/screenshots/dashboard.png" alt="Veil Dashboard" className="w-full h-auto" />
                 </div>
                 
-                {/* Middle Layer: Activity Feed */}
+                {/* Middle Layer: Create Auction */}
                 <div className="absolute top-[35%] right-[-15%] w-[360px] rounded-xl overflow-hidden border border-white/10 shadow-[0_0_50px_rgba(58,232,109,0.1)] transform rotate-[-4deg] hover:rotate-0 hover:z-40 transition-all duration-500 hover:scale-105 opacity-80 hover:opacity-100 z-20 origin-center bg-background">
-                  <img src="/screenshots/activity-feed.png" alt="Veil Activity Feed" className="w-full h-auto" />
+                  <img src="/screenshots/create-auction.png" alt="Veil Create Auction" className="w-full h-auto" />
                 </div>
 
                 {/* Front Layer: Submit Bid */}

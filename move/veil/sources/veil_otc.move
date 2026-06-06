@@ -24,8 +24,6 @@ const EQuotingStillOpen: u64 = 3;
 const EBadCloseTime: u64 = 4;
 const EWrongDeposit: u64 = 5;
 const ERevealMismatch: u64 = 6;
-const EQuoteAboveDeposit: u64 = 7;
-const EBadCommitment: u64 = 8;
 
 public struct Quote has store {
     quoter: address,
@@ -159,23 +157,24 @@ public fun close<T>(rfq: &mut Rfq<T>, clock: &Clock) {
 /// reserve is not met the asset returns to the maker and all deposits refund.
 public fun settle<T>(
     rfq: &mut Rfq<T>,
-    prices: vector<u64>,
-    nonces: vector<vector<u8>>,
-    reserve: u64,
+    mut prices: vector<u64>,
+    mut nonces: vector<vector<u8>>,
+    mut reserve: u64,
     reserve_nonce: vector<u8>,
     ctx: &mut TxContext,
 ) {
     assert!(rfq.state == STATE_REVEALING, EWrongState);
-    let n = vector::length(&rfq.quotes);
+    let mut n = vector::length(&rfq.quotes);
     assert!(vector::length(&prices) == n && vector::length(&nonces) == n, ERevealMismatch);
 
     // Verify the reserve commitment before touching anything else.
     let mut reserve_preimage = std::bcs::to_bytes(&reserve);
     vector::append(&mut reserve_preimage, reserve_nonce);
-    assert!(
-        std::hash::sha2_256(reserve_preimage) == rfq.reserve_commitment,
-        EBadCommitment,
-    );
+    
+    // 🚨 FIX: DoS protection for maker reserve
+    if (std::hash::sha2_256(reserve_preimage) != rfq.reserve_commitment) {
+        reserve = 0xffffffffffffffff; // Set to MAX_U64 so no bid can meet it
+    };
 
     let rfq_id = object::id(rfq);
 
@@ -197,19 +196,38 @@ public fun settle<T>(
     let mut i = 0;
     while (i < n) {
         let price = *vector::borrow(&prices, i);
-        assert!(price <= rfq.deposit, EQuoteAboveDeposit);
         let mut preimage = std::bcs::to_bytes(&price);
         vector::append(&mut preimage, *vector::borrow(&nonces, i));
-        assert!(
-            std::hash::sha2_256(preimage) == vector::borrow(&rfq.quotes, i).commitment,
-            EBadCommitment,
-        );
-        i = i + 1;
+        
+        // 🚨 FIX: Zero-Cost Cheater protection via complete disqualification
+        if (std::hash::sha2_256(preimage) != vector::borrow(&rfq.quotes, i).commitment || price > rfq.deposit) {
+            vector::remove(&mut prices, i);
+            vector::remove(&mut nonces, i);
+            let Quote { quoter, deposit, blob_id: _, commitment: _ } = vector::remove(&mut rfq.quotes, i);
+            send_or_destroy(deposit, quoter, ctx);
+            n = n - 1;
+        } else {
+            i = i + 1;
+        };
+    };
+
+    if (n == 0) {
+        let asset = option::extract(&mut rfq.asset);
+        transfer::public_transfer(asset, rfq.maker);
+        rfq.state = STATE_SETTLED;
+        event::emit(RfqSettled {
+            rfq: rfq_id,
+            winner: rfq.maker,
+            price: 0,
+            quote_count: 0,
+            reserve_met: false,
+        });
+        return
     };
 
     // Highest quote wins (first-price = highest index at tie → earliest bid wins).
     let (winner_index, winning_price) = settlement::clear(&prices, settlement::first_price());
-    let reserve_met = winning_price >= reserve;
+    let reserve_met = winning_price >= reserve && winning_price > 0;
 
     let maker = rfq.maker;
     let mut k = n;

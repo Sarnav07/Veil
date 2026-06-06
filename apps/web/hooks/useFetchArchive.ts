@@ -8,6 +8,7 @@ export function useFetchArchive(auctionId: string, type: 'launch' | 'otc') {
   const [archive, setArchive] = useState<ArchiveRecord | null>(null);
   const [loadingWalrus, setLoadingWalrus] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [blobId, setBlobId] = useState<string | null>(null);
 
   const eventType = type === 'launch' 
     ? `${packageId}::veil_launch::ArchiveLinked` 
@@ -35,29 +36,32 @@ export function useFetchArchive(auctionId: string, type: 'launch' | 'otc') {
     // blob_id is vector<u8>, we need to decode it to string
     const blobIdArray = parsed.blob_id as number[];
     const blobIdStr = new TextDecoder().decode(new Uint8Array(blobIdArray));
+    setBlobId(blobIdStr);
+  }, [events, auctionId]);
 
-    const fetchWalrus = async () => {
-      setLoadingWalrus(true);
-      try {
-        const walrus = new WalrusClient({
-          publisherUrl: walrusPublisherUrl,
-          aggregatorUrl: walrusAggregatorUrl,
-        });
-        const bytes = await walrus.read(blobIdStr);
-        setArchive(decodeArchive(bytes));
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoadingWalrus(false);
-      }
-    };
-
-    fetchWalrus();
-  }, [events, auctionId, walrusAggregatorUrl, walrusPublisherUrl]);
+  const fetchArchiveData = async () => {
+    if (!blobId) return;
+    setLoadingWalrus(true);
+    try {
+      const walrus = new WalrusClient({
+        publisherUrl: walrusPublisherUrl,
+        aggregatorUrl: walrusAggregatorUrl,
+      });
+      const bytes = await walrus.read(blobId);
+      setArchive(decodeArchive(bytes));
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoadingWalrus(false);
+    }
+  };
 
   return { 
     archive, 
-    isLoading: loadingEvents || loadingWalrus,
+    blobId,
+    fetchArchiveData,
+    isLoadingEvents: loadingEvents,
+    isLoadingWalrus: loadingWalrus,
     error 
   };
 }

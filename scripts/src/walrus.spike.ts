@@ -7,6 +7,23 @@
 import { WalrusClient } from '@veil/sdk';
 import { optionalEnv } from './env.js';
 
+// ✅ FIX: Replaced the blind sleep() with a robust retry loop
+async function readWithRetry(walrus: WalrusClient, blobId: string, maxRetries = 5, delayMs = 2000): Promise<Uint8Array> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      console.log(`  Attempt ${i + 1}: Fetching blob ${blobId}...`);
+      return await walrus.read(blobId);
+    } catch (err: any) {
+      if (i === maxRetries - 1) {
+        throw new Error(`Failed to fetch blob after ${maxRetries} attempts. Network may be down.`);
+      }
+      console.log(`  Blob not synced yet. Waiting ${delayMs}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  throw new Error("Unreachable");
+}
+
 async function main(): Promise<void> {
   const walrus = new WalrusClient({
     publisherUrl: optionalEnv('WALRUS_PUBLISHER_URL', 'https://publisher.walrus-testnet.walrus.space'),
@@ -16,8 +33,9 @@ async function main(): Promise<void> {
   const message = `veil-walrus-spike:${new Date().toISOString()}`;
   const payload = new TextEncoder().encode(message);
 
-  const blobId = await walrus.store(payload);
-  const roundTrip = new TextDecoder().decode(await walrus.read(blobId));
+  const blobId = await walrus.store(payload, 5);
+  const fetchedBytes = await readWithRetry(walrus, blobId);
+  const roundTrip = new TextDecoder().decode(fetchedBytes);
 
   if (roundTrip !== message) {
     throw new Error(`round-trip mismatch: sent "${message}", got "${roundTrip}"`);

@@ -46,16 +46,28 @@ export interface OtcSettleArrays {
  * then reject the mismatched commitment and refund that bidder.
  */
 export function buildLaunchSettleArrays(entries: RevealedEntry[]): LaunchSettleArrays {
-  const sorted = [...entries].sort((a, b) => a.index - b.index);
-  const prices: bigint[] = [];
-  const quantities: bigint[] = [];
-  const nonces: Uint8Array[] = [];
+  // 1. Find the maximum index to ensure dense array allocation
+  const maxIndex = entries.reduce((max, e) => Math.max(max, e.index), -1);
+  const size = maxIndex >= 0 ? maxIndex + 1 : 0;
 
-  for (const { plaintext } of sorted) {
-    const { price, qty, nonce } = decodeLaunchBid(plaintext);
-    prices.push(price);
-    quantities.push(qty);
-    nonces.push(nonce);
+  // 2. Pre-fill arrays with safe fallback values
+  const prices: bigint[] = new Array(size).fill(0n);
+  const quantities: bigint[] = new Array(size).fill(0n);
+  const nonces: Uint8Array[] = new Array(size).fill(new Uint8Array(0));
+
+  // 3. Directly assign by index, skipping the need to sort
+  for (const { index, plaintext } of entries) {
+    try {
+      const { price, qty, nonce } = decodeLaunchBid(plaintext);
+      prices[index] = price;
+      quantities[index] = qty;
+      nonces[index] = nonce;
+    } catch (err) {
+      // If decoding fails, it leaves the 0n fallback in place at this index.
+      // The Move contract will hash the 0s, see they don't match the on-chain commitment,
+      // and safely refund this specific corrupt bidder without crashing the Keeper.
+      console.warn(`[!] Failed to decode launch bid at index ${index}. Using zero defaults.`);
+    }
   }
 
   return { prices, quantities, nonces };
@@ -68,14 +80,20 @@ export function buildLaunchSettleArrays(entries: RevealedEntry[]): LaunchSettleA
  * Same index-alignment contract as `buildLaunchSettleArrays`.
  */
 export function buildOtcSettleArrays(entries: RevealedEntry[]): OtcSettleArrays {
-  const sorted = [...entries].sort((a, b) => a.index - b.index);
-  const prices: bigint[] = [];
-  const nonces: Uint8Array[] = [];
+  const maxIndex = entries.reduce((max, e) => Math.max(max, e.index), -1);
+  const size = maxIndex >= 0 ? maxIndex + 1 : 0;
 
-  for (const { plaintext } of sorted) {
-    const { price, nonce } = decodeQuote(plaintext);
-    prices.push(price);
-    nonces.push(nonce);
+  const prices: bigint[] = new Array(size).fill(0n);
+  const nonces: Uint8Array[] = new Array(size).fill(new Uint8Array(0));
+
+  for (const { index, plaintext } of entries) {
+    try {
+      const { price, nonce } = decodeQuote(plaintext);
+      prices[index] = price;
+      nonces[index] = nonce;
+    } catch (err) {
+      console.warn(`[!] Failed to decode OTC quote at index ${index}. Using zero defaults.`);
+    }
   }
 
   return { prices, nonces };

@@ -53,16 +53,44 @@ export function Footer() {
         <p className="font-sans text-sm text-text-secondary">
           © 2026 Veil Protocol. All rights reserved. · <a href="https://tatum.io/tatum-x-walrus-hackathon" target="_blank" rel="noopener noreferrer" className="hover:text-text-primary transition-colors no-underline text-inherit">Tatum x Walrus Hackathon</a>
         </p>
-        <div className="flex items-center gap-2">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
-          </span>
-          <p className="font-mono text-xs text-text-secondary uppercase tracking-widest">
-            Sui Testnet
-          </p>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <ChainIdPill />
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+            </span>
+            <p className="font-mono text-xs text-text-secondary uppercase tracking-widest">
+              Sui Testnet
+            </p>
+          </div>
         </div>
       </div>
     </footer>
+  );
+}
+
+// Client component so we can use hooks without making the whole footer rerender
+import { useSuiClient } from '@mysten/dapp-kit';
+import { useEffect, useState } from 'react';
+import { CheckCircle2 } from 'lucide-react';
+
+function ChainIdPill() {
+  const client = useSuiClient();
+  const [chainId, setChainId] = useState<string | null>(null);
+
+  useEffect(() => {
+    client.getChainIdentifier().then(setChainId).catch(console.error);
+  }, [client]);
+
+  if (!chainId) return null;
+
+  return (
+    <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-border-subtle bg-black/50 text-text-secondary">
+      <CheckCircle2 size={12} className="text-accent" />
+      <span className="font-mono text-[10px] uppercase tracking-wider">
+        RPC: Tatum Gateway <span className="opacity-50">({chainId})</span>
+      </span>
+    </div>
   );
 }

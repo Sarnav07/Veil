@@ -243,10 +243,9 @@ fun reserve_not_met_returns_asset_and_refunds_all() {
     ts::end(sc);
 }
 
-// A forged reveal (wrong price, right nonce) must abort.
+// A forged reveal (wrong price, right nonce) is ignored and pruned.
 #[test]
-#[expected_failure(abort_code = veil_otc::EBadCommitment)]
-fun forged_reveal_aborts() {
+fun forged_reveal_ignores() {
     let maker = @0xface;
     let alice = @0xa11ce;
 
@@ -298,6 +297,9 @@ fun forged_reveal_aborts() {
             reserve_nonce,
             ctx,
         );
+        // assert that the state is settled and the quote count is 0 (it was pruned)
+        assert!(veil_otc::quote_count(&rfq) == 0, 0);
+        assert!(veil_otc::state(&rfq) == STATE_SETTLED, 1);
         clock::destroy_for_testing(clk);
         ts::return_shared(rfq);
     };

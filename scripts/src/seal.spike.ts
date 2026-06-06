@@ -19,11 +19,13 @@ import { optionalEnv, requireEnv } from './env.js';
 // The published `veil` package id (the one defining `seal_approve`).
 const VEIL_PACKAGE_ID = optionalEnv(
   'VEIL_PACKAGE_ID',
-  '0x0c2de006e73edc43734c63fd031e0ac57acd01f03260c5281bff69aa0999eba8'
+  '0xe519726f67050bfee2538afdc8ff262f77de450bfb5591c7d06d9c764e440a54'
 );
 
 function toHexId(label: string): string {
-  return `0x${Buffer.from(label, 'utf8').toString('hex')}`;
+  const hex = Buffer.from(label, 'utf8').toString('hex');
+  // Sui Object IDs MUST be exactly 32 bytes (64 hex characters)
+  return `0x${hex.padEnd(64, '0')}`;
 }
 
 function keyServerIds(): string[] {

@@ -1,12 +1,5 @@
 /**
  * M2 integration: the storage core, end to end against Walrus testnet.
- *
- * Encodes a bid, commits to it, stores it on Walrus, reads it back, and checks
- * the round-trip + commitment stability. Then does the same for a settled-auction
- * archive record. This is the exact path `submit_bid(blob_id, commitment)` and the
- * trade archive rely on (wiring the blobId onto Sui needs a published package + gas,
- * which is parked).
- *
  * Run: pnpm spike:m2
  */
 import {
@@ -28,6 +21,23 @@ function assertEqualBytes(a: Uint8Array, b: Uint8Array, label: string): void {
   }
 }
 
+// ✅ FIX: Replaced the blind sleep() with a robust retry loop
+async function readWithRetry(walrus: WalrusClient, blobId: string, maxRetries = 5, delayMs = 2000): Promise<Uint8Array> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      console.log(`  Attempt ${i + 1}: Fetching blob ${blobId}...`);
+      return await walrus.read(blobId);
+    } catch (err: any) {
+      if (i === maxRetries - 1) {
+        throw new Error(`Failed to fetch blob after ${maxRetries} attempts. Network may be down.`);
+      }
+      console.log(`  Blob not synced yet. Waiting ${delayMs}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  throw new Error("Unreachable");
+}
+
 async function main(): Promise<void> {
   const walrus = new WalrusClient({
     publisherUrl: optionalEnv('WALRUS_PUBLISHER_URL', 'https://publisher.walrus-testnet.walrus.space'),
@@ -39,8 +49,10 @@ async function main(): Promise<void> {
   const payload = encodeBid({ amount, nonce: randomNonce() });
   const commitment = await commit(payload);
 
-  const blobId = await walrus.store(payload);
-  const fetched = await walrus.read(blobId);
+  const blobId = await walrus.store(payload, 5);
+  
+  // ✅ FIX: Actively poll the network instead of sleeping blindly
+  const fetched = await readWithRetry(walrus, blobId);
   assertEqualBytes(payload, fetched, 'bid payload round-trip');
 
   const decoded = decodeBid(fetched);
@@ -55,8 +67,12 @@ async function main(): Promise<void> {
     bidCount: 2,
     settledAtMs: 1_717_000_000_000,
   };
-  const archiveBlobId = await walrus.store(encodeArchive(record));
-  const recordBack = decodeArchive(await walrus.read(archiveBlobId));
+  
+  const archiveBlobId = await walrus.store(encodeArchive(record), 5);
+  
+  // ✅ FIX: Actively poll for the archive record
+  const fetchedArchive = await readWithRetry(walrus, archiveBlobId);
+  const recordBack = decodeArchive(fetchedArchive);
   if (recordBack.auctionId !== record.auctionId) throw new Error('archive round-trip mismatch');
 
   console.log('M2 Walrus storage integration OK.');

@@ -197,8 +197,8 @@ on-chain, and prints the clearing price marked to market via the Tatum Data API.
 
 | | |
 |--|--|
-| Package ID | `0x0c2de006e73edc43734c63fd031e0ac57acd01f03260c5281bff69aa0999eba8` |
-| UpgradeCap | `0x0f58e47183eb20fb6e6f166c8fff2e1633de2e5633e68a8ddc77f669e4b6d5f6` |
+| Package ID | `0xe519726f67050bfee2538afdc8ff262f77de450bfb5591c7d06d9c764e440a54` |
+| UpgradeCap | `0x3cdadddb6d6e31f6623a41c45bf22a1f56f37b56a80eec3ae5f281767cf916c4` |
 
 See [docs/ADDRESSES.md](./docs/ADDRESSES.md). Full design rationale in
 [docs/WHITEPAPER.md](./docs/WHITEPAPER.md); module-by-module build notes in

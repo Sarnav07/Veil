@@ -21,6 +21,12 @@ fun commit_of(price: u64, qty: u64, nonce: vector<u8>): vector<u8> {
     std::hash::sha2_256(preimage)
 }
 
+fun reserve_commit_of(reserve: u64, nonce: vector<u8>): vector<u8> {
+    let mut preimage = std::bcs::to_bytes(&reserve);
+    vector::append(&mut preimage, nonce);
+    std::hash::sha2_256(preimage)
+}
+
 fun deposit_coin(sc: &mut ts::Scenario): Coin<SUI> {
     coin::mint_for_testing<SUI>(DEPOSIT, ts::ctx(sc))
 }
@@ -37,7 +43,15 @@ fun open_sale(sc: &mut ts::Scenario, supply: u64) {
     let ctx = ts::ctx(sc);
     let clk = clock::create_for_testing(ctx);
     let tokens = coin::mint_for_testing<TOKEN>(supply, ctx);
-    veil_launch::create<TOKEN>(tokens, 5_000, DEPOSIT, &clk, ctx);
+    veil_launch::create<TOKEN>(
+        tokens, 
+        5_000, 
+        DEPOSIT, 
+        reserve_commit_of(5, b"rn"), 
+        b"reserveBlob", 
+        &clk, 
+        ctx
+    );
     clock::destroy_for_testing(clk);
 }
 
@@ -76,6 +90,8 @@ fun undersubscribed_fills_everyone_at_lowest() {
             vector[12, 8],
             vector[10, 10],
             vector[b"na", b"nb"],
+            5,
+            b"rn",
             ctx,
         );
         assert!(veil_launch::state(&sale) == STATE_SETTLED, 0);
@@ -136,6 +152,8 @@ fun exactly_filled() {
             vector[20, 15],
             vector[60, 40],
             vector[b"na", b"nb"],
+            5,
+            b"rn",
             ctx,
         );
         assert!(veil_launch::supply_remaining(&sale) == 0, 0);
@@ -197,6 +215,8 @@ fun oversubscribed_prorata_at_margin() {
             vector[20, 10, 10],
             vector[60, 60, 60],
             vector[b"na", b"nb", b"nc"],
+            5,
+            b"rn",
             ctx,
         );
         clock::destroy_for_testing(clk);
@@ -239,10 +259,6 @@ fun oversubscribed_prorata_at_margin() {
 
 #[test]
 fun chain_hides_amounts_until_settle() {
-    // Anti-snipe: a bot watching the chain sees only {deposit, commitment, blobId}.
-    // There is no accessor exposing price or quantity, so it cannot outbid before the
-    // reveal. We assert the surface and that two different bids of equal deposit are
-    // indistinguishable by anything but their opaque commitment.
     let seller = @0x5e11e7;
     let alice = @0xa11ce;
     let bob = @0xb0b;
@@ -256,15 +272,12 @@ fun chain_hides_amounts_until_settle() {
     {
         let sale = ts::take_shared<Sale<TOKEN>>(&sc);
         assert!(veil_launch::bid_count(&sale) == 2, 0);
-        // every bid escrowed the same deposit regardless of its hidden size
         assert!(veil_launch::deposit(&sale) == DEPOSIT, 1);
         assert!(veil_launch::bidder(&sale, 0) == alice, 2);
         assert!(veil_launch::bidder(&sale, 1) == bob, 3);
         assert!(veil_launch::bid_blob_id(&sale, 1) == b"blobB", 4);
-        // the only on-chain trace of a bid's value is its preimage-resistant hash
         assert!(veil_launch::bid_commitment(&sale, 0) == commit_of(12, 10, b"na"), 5);
         assert!(veil_launch::bid_commitment(&sale, 1) == commit_of(999, 50, b"nb"), 6);
-        // commitments differ but reveal nothing about the ordering of the bids
         assert!(
             veil_launch::bid_commitment(&sale, 0) != veil_launch::bid_commitment(&sale, 1),
             7,
@@ -276,8 +289,7 @@ fun chain_hides_amounts_until_settle() {
 }
 
 #[test]
-#[expected_failure(abort_code = veil_launch::EBadCommitment)]
-fun settle_rejects_forged_reveal() {
+fun settle_ignores_forged_reveal() {
     let seller = @0x5e11e7;
     let alice = @0xa11ce;
 
@@ -293,7 +305,10 @@ fun settle_rejects_forged_reveal() {
         clock::set_for_testing(&mut clk, 5_000);
         veil_launch::close(&mut sale, &clk);
         // keeper tries to inflate alice's quantity to 90 — commitment won't open
-        veil_launch::settle(&mut sale, vector[12], vector[90], vector[b"na"], ctx);
+        veil_launch::settle(&mut sale, vector[12], vector[90], vector[b"na"], 5, b"rn", ctx);
+        // assert that the state is settled and the bid count is 0 (it was pruned)
+        assert!(veil_launch::bid_count(&sale) == 0, 0);
+        assert!(veil_launch::state(&sale) == STATE_SETTLED, 1);
         clock::destroy_for_testing(clk);
         ts::return_shared(sale);
     };
@@ -314,7 +329,7 @@ fun no_bids_returns_supply_to_seller() {
         let mut clk = clock::create_for_testing(ctx);
         clock::set_for_testing(&mut clk, 5_000);
         veil_launch::close(&mut sale, &clk);
-        veil_launch::settle(&mut sale, vector[], vector[], vector[], ctx);
+        veil_launch::settle(&mut sale, vector[], vector[], vector[], 5, b"rn", ctx);
         assert!(veil_launch::state(&sale) == STATE_SETTLED, 0);
         clock::destroy_for_testing(clk);
         ts::return_shared(sale);
@@ -331,8 +346,7 @@ fun no_bids_returns_supply_to_seller() {
 }
 
 #[test]
-#[expected_failure(abort_code = veil_launch::EBidAboveDeposit)]
-fun settle_rejects_bid_over_deposit() {
+fun settle_ignores_bid_over_deposit() {
     let seller = @0x5e11e7;
     let alice = @0xa11ce;
 
@@ -348,10 +362,47 @@ fun settle_rejects_bid_over_deposit() {
         let mut clk = clock::create_for_testing(ctx);
         clock::set_for_testing(&mut clk, 5_000);
         veil_launch::close(&mut sale, &clk);
-        veil_launch::settle(&mut sale, vector[20_000], vector[100], vector[b"na"], ctx);
+        veil_launch::settle(&mut sale, vector[20_000], vector[100], vector[b"na"], 5, b"rn", ctx);
+        // assert that the state is settled and the bid count is 0 (it was pruned)
+        assert!(veil_launch::bid_count(&sale) == 0, 0);
+        assert!(veil_launch::state(&sale) == STATE_SETTLED, 1);
         clock::destroy_for_testing(clk);
         ts::return_shared(sale);
     };
 
+    ts::end(sc);
+}
+
+#[test]
+fun test_permissionless_settle() {
+    let seller = @0x5e11e7;
+    let alice = @0xa11ce;
+    let some_random_keeper = @0x99999;
+
+    let mut sc = ts::begin(seller);
+    open_sale(&mut sc, 100);
+    bid(&mut sc, alice, b"blobA", commit_of(12, 10, b"na"));
+
+    // Someone completely unrelated to the sale closes and settles it
+    ts::next_tx(&mut sc, some_random_keeper);
+    {
+        let mut sale = ts::take_shared<Sale<TOKEN>>(&sc);
+        let ctx = ts::ctx(&mut sc);
+        let mut clk = clock::create_for_testing(ctx);
+        clock::set_for_testing(&mut clk, 5_000);
+        veil_launch::close(&mut sale, &clk);
+        veil_launch::settle(
+            &mut sale,
+            vector[12],
+            vector[10],
+            vector[b"na"],
+            5,
+            b"rn",
+            ctx,
+        );
+        assert!(veil_launch::state(&sale) == STATE_SETTLED, 0);
+        clock::destroy_for_testing(clk);
+        ts::return_shared(sale);
+    };
     ts::end(sc);
 }

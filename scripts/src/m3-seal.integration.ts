@@ -24,6 +24,23 @@ function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
   return a.length === b.length && a.every((x, i) => x === b[i]);
 }
 
+// ✅ FIX: Replaced the blind sleep() with a robust retry loop
+async function readWithRetry(walrus: WalrusClient, blobId: string, maxRetries = 5, delayMs = 2000): Promise<Uint8Array> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      console.log(`  Attempt ${i + 1}: Fetching blob ${blobId}...`);
+      return await walrus.read(blobId);
+    } catch (err: any) {
+      if (i === maxRetries - 1) {
+        throw new Error(`Failed to fetch blob after ${maxRetries} attempts. Network may be down.`);
+      }
+      console.log(`  Blob not synced yet. Waiting ${delayMs}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  throw new Error("Unreachable");
+}
+
 async function main(): Promise<void> {
   // Seal binds the ciphertext to a real on-chain package, so this runs only once
   // the veil package is published and its id is exported.
@@ -51,8 +68,9 @@ async function main(): Promise<void> {
   const ciphertext = await vault.sealBid(payload, closeMs);
   if (bytesEqual(ciphertext, payload)) throw new Error('ciphertext equals plaintext');
 
-  const blobId = await walrus.store(ciphertext);
-  if (!bytesEqual(await walrus.read(blobId), ciphertext)) {
+  const blobId = await walrus.store(ciphertext, 5);
+  const fetched = await readWithRetry(walrus, blobId);
+  if (!bytesEqual(fetched, ciphertext)) {
     throw new Error('sealed blob round-trip mismatch');
   }
 

@@ -118,8 +118,7 @@ fun first_price_two_bidders() {
 }
 
 #[test]
-#[expected_failure(abort_code = auction::EBadCommitment)]
-fun settle_rejects_forged_reveal() {
+fun settle_ignores_forged_reveal() {
     let seller = @0x5e11e7;
     let alice = @0xa11ce;
 
@@ -152,6 +151,9 @@ fun settle_rejects_forged_reveal() {
         auction::close(&mut a, &clk);
         // keeper tries to inflate alice's bid to 900 — commitment won't open
         auction::settle(&mut a, vector[900], vector[b"nonce-alice"], ctx);
+        // assert that the state is settled and the bid count is 0 (it was pruned)
+        assert!(auction::bid_count(&a) == 0, 0);
+        assert!(auction::state(&a) == STATE_SETTLED, 1);
         clock::destroy_for_testing(clk);
         ts::return_shared(a);
     };
