@@ -86,7 +86,10 @@ export default function ParticipatePage({ params }: { params: { id: string } }) 
   };
 
   const fiatValue = rate && bidStr ? (Number(bidStr) * rate).toFixed(2) : '0.00';
-  const bidAmountNano = BigInt(Math.floor(Number(bidStr || '0') * 1_000_000_000));
+  const bidNum = Number(bidStr);
+  const bidAmountNano = Number.isFinite(bidNum) && bidNum > 0
+    ? BigInt(Math.floor(bidNum * 1_000_000_000))
+    : 0n;
   const totalRequired = bidAmountNano + (auctionState?.deposit || 0n);
   const hasInsufficientBalance = !!account && !!bidStr && totalRequired > balance;
 
@@ -94,6 +97,23 @@ export default function ParticipatePage({ params }: { params: { id: string } }) 
     return (
       <Shell className="max-w-2xl flex items-center justify-center py-20">
         <p className="text-text-secondary animate-pulse">Loading auction state...</p>
+      </Shell>
+    );
+  }
+
+  if (auctionState.error || !auctionState.coinType) {
+    return (
+      <Shell className="max-w-xl mx-auto pt-24 pb-32 text-center">
+        <div className="p-10 border border-border-subtle rounded-3xl bg-[#000000]">
+          <AlertCircle className="w-10 h-10 text-error mx-auto mb-4" />
+          <h1 className="font-serif text-3xl mb-2 text-text-primary">Auction Not Found</h1>
+          <p className="text-sm text-text-secondary font-mono mb-8 break-all">
+            No active auction exists at {params.id.slice(0, 10)}...{params.id.slice(-6)}
+          </p>
+          <Button href="/" className="px-8 py-3 !bg-white/5 !text-white border border-white/10 hover:!bg-white/10">
+            Return to Dashboard
+          </Button>
+        </div>
       </Shell>
     );
   }
@@ -282,7 +302,7 @@ export default function ParticipatePage({ params }: { params: { id: string } }) 
             </Button>
             
             <p className="text-center text-xs text-text-secondary mt-4 max-w-sm mx-auto">
-              Your bid will be encrypted using <a href="https://docs.sui.io" target="_blank" rel="noreferrer" className="text-accent hover:underline">Sui Walrus</a>. It cannot be decrypted until the auction closes.
+              Your bid is encrypted with Seal and stored on <a href="https://docs.walrus.site" target="_blank" rel="noreferrer" className="text-accent hover:underline">Walrus</a>. It cannot be decrypted until the auction closes.
             </p>
           </div>
         )}

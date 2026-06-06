@@ -80,7 +80,7 @@ function ChainIdPill() {
   const [chainId, setChainId] = useState<string | null>(null);
 
   useEffect(() => {
-    client.getChainIdentifier().then(setChainId).catch(console.error);
+    client.getChainIdentifier().then(setChainId).catch(() => {});
   }, [client]);
 
   if (!chainId) return null;

@@ -94,8 +94,26 @@ export function useAuctionState(auctionId: string) {
     };
   }, [data, auctionId]);
 
-  if (isLoading || !state) {
-    return { isLoading: true, error: error as Error | null } as AuctionState;
+  // Still fetching the object from chain.
+  if (isLoading) {
+    return { isLoading: true, error: null } as AuctionState;
+  }
+
+  // Query settled but the object doesn't exist / isn't a Move object
+  // (deleted, typo'd id, or wrong type). Surface a not-found state instead
+  // of spinning forever.
+  if (!state) {
+    return {
+      id: auctionId,
+      coinType: '',
+      closeMs: 0,
+      deposit: 0n,
+      hasArchive: false,
+      archiveBlobId: null,
+      isClosed: false,
+      isLoading: false,
+      error: (error as Error | null) ?? new Error('Auction not found'),
+    } as AuctionState;
   }
 
   return state;

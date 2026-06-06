@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { Shell } from '@/components/layout/Shell';
 import { Button } from '@/components/ui/Button';
@@ -13,7 +12,6 @@ type Mode = 'launch' | 'otc';
 
 export default function CreatePage() {
   const account = useCurrentAccount();
-  const router = useRouter();
   const [mode, setMode] = useState<Mode>('launch');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
