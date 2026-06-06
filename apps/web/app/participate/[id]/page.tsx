@@ -22,6 +22,7 @@ export default function ParticipatePage({ params }: { params: { id: string } }) 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [txDigest, setTxDigest] = useState('');
   const [hasCopied, setHasCopied] = useState(false);
   
   const { data: rate } = useExchangeRate();
@@ -54,9 +55,14 @@ export default function ParticipatePage({ params }: { params: { id: string } }) 
     }
     if (isNaN(Number(bidStr)) || Number(bidStr) <= 0) return setErrorMsg('Please enter a valid positive bid amount.');
     
+    const price = BigInt(Math.floor(Number(bidStr) * 1_000_000_000));
+    
+    if (auctionType === 'otc' && price > BigInt(auctionState.deposit)) {
+      return setErrorMsg(`In OTC mode, your bid cannot exceed the required uniform deposit (${Number(auctionState.deposit) / 1_000_000_000} SUI).`);
+    }
+
     setIsSubmitting(true);
     try {
-      const price = BigInt(Math.floor(Number(bidStr) * 1_000_000_000));
       const coinType = auctionState.coinType;
       
       let tx;
@@ -67,7 +73,10 @@ export default function ParticipatePage({ params }: { params: { id: string } }) 
         tx = await submitOtcQuote(coinType, params.id, BigInt(auctionState.deposit), price, BigInt(auctionState.closeMs));
       }
 
-      await signAndExecute({ transaction: tx });
+      const response = await signAndExecute({ transaction: tx });
+      if (response && response.digest) {
+        setTxDigest(response.digest);
+      }
       setIsSuccess(true);
     } catch (err: any) {
 
@@ -199,6 +208,18 @@ export default function ParticipatePage({ params }: { params: { id: string } }) 
             <p className="text-text-secondary text-center max-w-sm">
               Your sealed bid has been processed. The cipher will remain encrypted until the auction closes.
             </p>
+            {txDigest && (
+              <div className="mb-6">
+                <a 
+                  href={`https://testnet.suivision.xyz/txblock/${txDigest}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-accent hover:underline text-sm font-mono flex items-center justify-center gap-2"
+                >
+                  View Proof on Sui Explorer ↗
+                </a>
+              </div>
+            )}
             <div className="pt-6">
               <Button href="/" className="px-8 py-3 !bg-white/5 !text-white border border-white/10 hover:!bg-white/10">
                 Return to Dashboard
